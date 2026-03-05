@@ -1,0 +1,2193 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PolyVoice — Lịch Rảnh Nhóm</title>
+    <meta name="description"
+        content="PolyVoice — Ứng dụng đăng ký và tổng hợp lịch rảnh nhóm, đồng bộ real-time qua Firebase. Dễ dàng xem ai rảnh lúc nào." />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PolyVoice — Lịch Rảnh Nhóm" />
+    <meta property="og:description"
+        content="Đăng ký và xem lịch rảnh nhóm, đồng bộ real-time. Biết ngay ai rảnh lúc nào!" />
+    <meta property="og:locale" content="vi_VN" />
+    <link rel="icon" type="image/jpeg" href="PolyVoice.jpg" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+            from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getDatabase, ref, set, remove, onValue, off as dbOff }
+            from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+        // ══════════════════════════════════════════════
+        //  CẤU HÌNH FIREBASE — thay bằng config của bạn
+        // ══════════════════════════════════════════════
+        const firebaseConfig = {
+            apiKey: "AIzaSyADwiFZtYMc5IK3XXpJtJi8BAYZ2lN4zFQ",
+            authDomain: "freetime-nhom.firebaseapp.com",
+            databaseURL: "https://freetime-nhom-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "freetime-nhom",
+            storageBucket: "freetime-nhom.firebasestorage.app",
+            messagingSenderId: "587528455829",
+            appId: "1:587528455829:web:916928f1ec950d21337d9c"
+        };
+        // ══════════════════════════════════════════════
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // ── Expose to global so inline handlers can reach ──
+        window._fb = {
+            auth, db, ref, set, remove, onValue, dbOff,
+            GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+        };
+
+        // ── Bootstrap app once DOM is ready ──
+        document.addEventListener('DOMContentLoaded', () => window._initApp());
+    </script>
+
+    <style>
+        :root {
+            --blue-900: #1e3a8a;
+            --blue-800: #1e40af;
+            --blue-700: #1d4ed8;
+            --blue-600: #2563eb;
+            --blue-500: #3b82f6;
+            --blue-400: #60a5fa;
+            --blue-300: #93c5fd;
+            --blue-200: #bfdbfe;
+            --blue-100: #dbeafe;
+            --blue-50: #eff6ff;
+            --white: #fff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --amber: #f59e0b;
+            --amber-bg: #fef3c7;
+            --amber-dk: #d97706;
+            --green: #22c55e;
+            --red: #ef4444;
+            --sh-sm: 0 1px 3px rgba(29, 78, 216, .08), 0 1px 2px rgba(29, 78, 216, .06);
+            --sh-md: 0 4px 16px rgba(29, 78, 216, .10), 0 2px 6px rgba(29, 78, 216, .06);
+            --sh-lg: 0 8px 32px rgba(29, 78, 216, .12), 0 4px 12px rgba(29, 78, 216, .08);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: var(--white);
+            border-bottom: 1.5px solid var(--blue-100);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--sh-sm);
+        }
+
+        .header-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--blue-700);
+            letter-spacing: -.02em;
+        }
+
+        .logo img {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        nav {
+            display: flex;
+            gap: 2px;
+        }
+
+        .tab-icon {
+            font-size: .95rem;
+            line-height: 1;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--gray-500);
+            transition: all .18s;
+        }
+
+        .tab-btn:hover {
+            color: var(--blue-700);
+            background: var(--blue-50);
+        }
+
+        .tab-btn.active {
+            color: var(--blue-700);
+            background: var(--blue-100);
+            font-weight: 600;
+        }
+
+        .auth-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--blue-50);
+            border: 1.5px solid var(--blue-200);
+            border-radius: 999px;
+            padding: 4px 14px 4px 4px;
+            font-size: .85rem;
+            font-weight: 500;
+            color: var(--blue-700);
+        }
+
+        /* ── SYNC INDICATOR ── */
+        .sync-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .78rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1.5px solid;
+            transition: all .3s;
+        }
+
+        .sync-dot.idle {
+            color: var(--gray-400);
+            border-color: var(--gray-200);
+            background: var(--white);
+        }
+
+        .sync-dot.saving {
+            color: var(--blue-600);
+            border-color: var(--blue-200);
+            background: var(--blue-50);
+        }
+
+        .sync-dot.saved {
+            color: #16a34a;
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+
+        .sync-dot.error {
+            color: var(--red);
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        .sync-dot.live {
+            color: #16a34a;
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+
+        .sync-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: currentColor;
+            animation: pulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: .4;
+                transform: scale(.7)
+            }
+        }
+
+        .sync-dot.idle .sync-pulse,
+        .sync-dot.saved .sync-pulse {
+            animation: none;
+            opacity: .6;
+        }
+
+        /* ── BUTTONS ── */
+        .btn {
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-weight: 600;
+            font-size: .9rem;
+            padding: 8px 18px;
+            transition: all .18s;
+        }
+
+        .btn-primary {
+            background: var(--blue-700);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-800);
+            box-shadow: var(--sh-md);
+        }
+
+        .btn-outline {
+            background: var(--white);
+            color: var(--blue-700);
+            border: 1.5px solid var(--blue-300);
+        }
+
+        .btn-outline:hover {
+            background: var(--blue-50);
+            border-color: var(--blue-500);
+        }
+
+        .btn-danger {
+            background: var(--white);
+            color: var(--red);
+            border: 1.5px solid #fca5a5;
+        }
+
+        .btn-danger:hover {
+            background: #fef2f2;
+        }
+
+        .btn-google {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--white);
+            border: 1.5px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: all .18s;
+        }
+
+        .btn-google:hover {
+            box-shadow: var(--sh-md);
+            border-color: var(--blue-300);
+        }
+
+        /* ── LAYOUT ── */
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: fadeUp .25s ease;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(6px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--blue-900);
+            margin-bottom: 6px;
+        }
+
+        .page-subtitle {
+            font-size: .9rem;
+            color: var(--gray-500);
+            margin-bottom: 24px;
+        }
+
+        /* ── WEEK NAV ── */
+        .week-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--sh-sm);
+        }
+
+        .week-nav h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--blue-900);
+            flex: 1;
+        }
+
+        .week-range {
+            font-size: .82rem;
+            color: var(--gray-500);
+            font-family: monospace;
+        }
+
+        .arrow-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1.5px solid var(--blue-200);
+            background: var(--white);
+            color: var(--blue-700);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+        }
+
+        .arrow-btn:hover {
+            background: var(--blue-50);
+            border-color: var(--blue-500);
+        }
+
+        .arrow-btn:disabled {
+            opacity: .35;
+            cursor: not-allowed;
+        }
+
+        /* ── LEGEND ── */
+        .legend {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: .8rem;
+            color: var(--gray-500);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* ── SCHEDULE GRID ── */
+        .schedule-grid {
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--sh-sm);
+        }
+
+        .grid-header {
+            display: grid;
+            grid-template-columns: 72px repeat(7, 1fr);
+            background: var(--blue-700);
+            color: var(--white);
+        }
+
+        .ghc {
+            padding: 12px 6px;
+            text-align: center;
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        .ghc.time-col {
+            background: var(--blue-900);
+        }
+
+        .ghc.today-col {
+            background: var(--blue-500);
+        }
+
+        .ghc .day-num {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .ghc .day-name {
+            font-size: .7rem;
+            opacity: .8;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: 72px repeat(7, 1fr);
+            border-bottom: 1px solid var(--blue-50);
+        }
+
+        .grid-row:last-child {
+            border-bottom: none;
+        }
+
+        .time-label {
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            height: 48px;
+            font-size: .75rem;
+            font-family: monospace;
+            color: var(--gray-400);
+            background: var(--gray-50);
+            border-right: 1.5px solid var(--blue-100);
+        }
+
+        .slot {
+            height: 48px;
+            border-right: 1px solid var(--blue-50);
+            cursor: pointer;
+            transition: all .12s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .slot:last-child {
+            border-right: none;
+        }
+
+        .slot:hover {
+            background: var(--blue-50);
+        }
+
+        .slot.past {
+            cursor: not-allowed;
+            background: var(--gray-50);
+            opacity: .5;
+            pointer-events: none;
+        }
+
+        .slot.sel-online {
+            background: var(--blue-100);
+            box-shadow: inset 0 0 0 2px var(--blue-400);
+        }
+
+        .slot.sel-offline {
+            background: var(--amber-bg);
+            box-shadow: inset 0 0 0 2px var(--amber);
+        }
+
+        .slot-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .slot-dot.online {
+            background: var(--blue-500);
+        }
+
+        .slot-dot.offline {
+            background: var(--amber);
+        }
+
+        /* ── MODE SELECTOR ── */
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .mode-lbl {
+            font-size: .8rem;
+            color: var(--gray-500);
+        }
+
+        .mode-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .85rem;
+            font-weight: 600;
+            border: 1.5px solid;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            transition: all .15s;
+        }
+
+        .mode-btn.online {
+            border-color: var(--blue-400);
+            color: var(--blue-700);
+            background: var(--white);
+        }
+
+        .mode-btn.online.active,
+        .mode-btn.online:hover {
+            background: var(--blue-100);
+        }
+
+        .mode-btn.offline {
+            border-color: var(--amber);
+            color: #92400e;
+            background: var(--white);
+        }
+
+        .mode-btn.offline.active,
+        .mode-btn.offline:hover {
+            background: var(--amber-bg);
+        }
+
+        .mode-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .mode-dot.online {
+            background: var(--blue-500);
+        }
+
+        .mode-dot.offline {
+            background: var(--amber);
+        }
+
+        /* ── SAVE BAR ── */
+        .save-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 14px 20px;
+            background: var(--blue-50);
+            border-radius: 10px;
+            border: 1.5px solid var(--blue-200);
+        }
+
+        .save-bar p {
+            font-size: .88rem;
+            color: var(--blue-800);
+            flex: 1;
+        }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--blue-800);
+            color: var(--white);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-weight: 500;
+            box-shadow: var(--sh-lg);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* ── OVERVIEW GRID ── */
+        .overview-grid {
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--sh-sm);
+        }
+
+        .ov-header {
+            display: grid;
+            grid-template-columns: 72px repeat(7, 1fr);
+            background: var(--blue-700);
+            color: var(--white);
+        }
+
+        .ov-row {
+            display: grid;
+            grid-template-columns: 72px repeat(7, 1fr);
+            border-bottom: 1px solid var(--blue-50);
+        }
+
+        .ov-row:last-child {
+            border-bottom: none;
+        }
+
+        .ov-cell {
+            height: 52px;
+            border-right: 1px solid rgba(0, 0, 0, .04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .12s;
+        }
+
+        .ov-cell:hover {
+            background: var(--blue-50);
+        }
+
+        .ov-cell.few-people {
+            background: var(--blue-50);
+        }
+
+        .ov-cell.many-people {
+            background: var(--blue-100);
+        }
+
+        .ov-badge {
+            min-width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--blue-600);
+            color: var(--white);
+            font-size: .72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+        }
+
+        /* ── POPUP ── */
+        .popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 30, 80, .18);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeUp .2s;
+        }
+
+        .popup-box {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--sh-lg);
+            padding: 28px;
+            min-width: 340px;
+            max-width: 480px;
+            width: 90%;
+            border: 1.5px solid var(--blue-100);
+        }
+
+        .popup-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--blue-900);
+            margin-bottom: 4px;
+        }
+
+        .popup-sub {
+            font-size: .82rem;
+            color: var(--gray-400);
+            margin-bottom: 18px;
+        }
+
+        .ppl-section {
+            margin-bottom: 16px;
+        }
+
+        .ppl-label {
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--gray-400);
+            margin-bottom: 8px;
+        }
+
+        .ppl-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ppl-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .ppl-av {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--blue-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: .85rem;
+            color: var(--blue-800);
+            flex-shrink: 0;
+            border: 1.5px solid var(--blue-300);
+            overflow: hidden;
+        }
+
+        .ppl-av img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ppl-name {
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .mode-tag {
+            margin-left: auto;
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .mode-tag.online {
+            background: var(--blue-100);
+            color: var(--blue-700);
+        }
+
+        .mode-tag.offline {
+            background: var(--amber-bg);
+            color: #92400e;
+        }
+
+        .popup-close {
+            display: block;
+            width: 100%;
+            margin-top: 18px;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--blue-700);
+            color: var(--white);
+            border: none;
+            cursor: pointer;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: .9rem;
+            font-weight: 600;
+            transition: background .15s;
+        }
+
+        .popup-close:hover {
+            background: var(--blue-800);
+        }
+
+        /* ── STATS ── */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: var(--sh-sm);
+        }
+
+        .sc-label {
+            font-size: .78rem;
+            color: var(--gray-400);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 6px;
+        }
+
+        .sc-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--blue-700);
+            font-family: monospace;
+        }
+
+        .sc-sub {
+            font-size: .8rem;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+
+        .person-card {
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--sh-sm);
+            margin-bottom: 12px;
+        }
+
+        .pc-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            background: var(--blue-50);
+            border-bottom: 1.5px solid var(--blue-100);
+        }
+
+        .pc-name {
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--blue-900);
+        }
+
+        .pc-total {
+            margin-left: auto;
+            font-size: .78rem;
+            color: var(--gray-500);
+        }
+
+        .pc-body {
+            padding: 12px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pc-day-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .pc-day-lbl {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--blue-700);
+            background: var(--blue-100);
+            border-radius: 6px;
+            padding: 3px 8px;
+            white-space: nowrap;
+            min-width: 36px;
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        .pc-ranges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .range-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .78rem;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        .range-pill.online {
+            background: var(--blue-100);
+            color: var(--blue-700);
+        }
+
+        .range-pill.offline {
+            background: var(--amber-bg);
+            color: #92400e;
+        }
+
+        .range-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .range-dot.online {
+            background: var(--blue-500);
+        }
+
+        .range-dot.offline {
+            background: var(--amber);
+        }
+
+        .pc-empty {
+            font-size: .82rem;
+            color: var(--gray-300);
+            padding: 10px 18px;
+        }
+
+        /* ── LOGIN WALL ── */
+        .login-cta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+            text-align: center;
+            background: var(--white);
+            border: 1.5px solid var(--blue-100);
+            border-radius: 16px;
+            box-shadow: var(--sh-sm);
+        }
+
+        .login-cta svg {
+            margin-bottom: 16px;
+        }
+
+        .login-cta h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--blue-900);
+            margin-bottom: 8px;
+        }
+
+        .login-cta p {
+            font-size: .9rem;
+            color: var(--gray-500);
+            margin-bottom: 24px;
+            max-width: 340px;
+        }
+
+        /* ── LIVE BADGE ── */
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .72rem;
+            font-weight: 700;
+            color: #16a34a;
+            background: #f0fdf4;
+            border: 1.5px solid #bbf7d0;
+            border-radius: 999px;
+            padding: 2px 8px;
+        }
+
+        .live-blink {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 1.2s infinite;
+        }
+
+        /* ── RESPONSIVE: TABLET ── */
+        @media (max-width: 768px) {
+            .header-inner {
+                padding: 0 16px;
+                height: 56px;
+                gap: 8px;
+            }
+
+            .logo {
+                font-size: 1.05rem;
+                gap: 8px;
+            }
+
+            .logo svg {
+                width: 26px;
+                height: 26px;
+            }
+
+            nav {
+                gap: 1px;
+            }
+
+            .tab-btn {
+                padding: 6px 12px;
+                font-size: .82rem;
+            }
+
+            main {
+                padding: 20px 16px;
+            }
+
+            .page-title {
+                font-size: 1.25rem;
+            }
+
+            .week-nav {
+                padding: 10px 14px;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .week-nav h2 {
+                font-size: .9rem;
+            }
+
+            .schedule-grid,
+            .overview-grid {
+                border-radius: 12px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .grid-header,
+            .grid-row,
+            .ov-header,
+            .ov-row {
+                grid-template-columns: 52px repeat(7, minmax(46px, 1fr));
+                min-width: 374px;
+            }
+
+            .slot,
+            .ov-cell {
+                height: 42px;
+            }
+
+            .time-label {
+                height: 42px;
+                font-size: .7rem;
+                padding: 0 6px;
+            }
+
+            .ghc {
+                padding: 8px 4px;
+                font-size: .72rem;
+            }
+
+            .ghc .day-num {
+                font-size: .95rem;
+            }
+
+            .ghc .day-name {
+                font-size: .62rem;
+            }
+
+            .mode-selector {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .save-bar {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 12px 14px;
+            }
+
+            .save-bar p {
+                font-size: .82rem;
+                min-width: 100%;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 14px 16px;
+            }
+
+            .sc-value {
+                font-size: 1.6rem;
+            }
+
+            .pc-ranges {
+                gap: 4px;
+            }
+
+            .range-pill {
+                font-size: .72rem;
+                padding: 2px 7px;
+            }
+
+            .popup-box {
+                min-width: auto;
+                width: 92%;
+                padding: 22px;
+            }
+
+            .legend {
+                gap: 10px;
+                font-size: .75rem;
+            }
+
+            .user-chip {
+                font-size: .78rem;
+                padding: 3px 10px 3px 3px;
+            }
+
+            .btn-google {
+                padding: 7px 14px;
+                font-size: .82rem;
+            }
+        }
+
+        /* ── RESPONSIVE: SMALL PHONE ── */
+        @media (max-width: 480px) {
+            .header-inner {
+                height: 52px;
+                padding: 0 12px;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .logo {
+                font-size: .95rem;
+                gap: 6px;
+            }
+
+            .logo svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            nav .tab-btn {
+                padding: 5px 10px;
+                font-size: .76rem;
+            }
+
+            nav .tab-btn span {
+                display: none;
+            }
+
+            .auth-area .btn {
+                padding: 6px 12px;
+                font-size: .78rem;
+            }
+
+            main {
+                padding: 16px 10px;
+            }
+
+            .page-title {
+                font-size: 1.1rem;
+            }
+
+            .page-subtitle {
+                font-size: .8rem;
+                margin-bottom: 16px;
+            }
+
+            .week-nav {
+                padding: 8px 10px;
+                gap: 8px;
+                margin-bottom: 16px;
+            }
+
+            .week-nav h2 {
+                font-size: .82rem;
+            }
+
+            .week-range {
+                font-size: .72rem;
+            }
+
+            .arrow-btn {
+                width: 30px;
+                height: 30px;
+                font-size: .85rem;
+            }
+
+            .legend {
+                display: none;
+            }
+
+            .grid-header,
+            .grid-row,
+            .ov-header,
+            .ov-row {
+                grid-template-columns: 44px repeat(7, minmax(40px, 1fr));
+                min-width: 324px;
+            }
+
+            .slot,
+            .ov-cell {
+                height: 38px;
+            }
+
+            .time-label {
+                height: 38px;
+                font-size: .65rem;
+                padding: 0 4px;
+            }
+
+            .ghc {
+                padding: 6px 2px;
+                font-size: .68rem;
+            }
+
+            .ghc .day-num {
+                font-size: .85rem;
+            }
+
+            .ghc .day-name {
+                font-size: .58rem;
+                letter-spacing: 0;
+            }
+
+            .slot-dot {
+                width: 6px;
+                height: 6px;
+            }
+
+            .ov-badge {
+                min-width: 18px;
+                height: 18px;
+                font-size: .65rem;
+                padding: 0 3px;
+            }
+
+            .mode-selector {
+                gap: 5px;
+                margin-bottom: 12px;
+            }
+
+            .mode-lbl {
+                font-size: .72rem;
+            }
+
+            .mode-btn {
+                padding: 5px 12px;
+                font-size: .78rem;
+            }
+
+            .mode-dot {
+                width: 8px;
+                height: 8px;
+            }
+
+            .save-bar {
+                margin-top: 14px;
+                padding: 10px 12px;
+                gap: 8px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .save-bar p {
+                font-size: .78rem;
+                text-align: center;
+            }
+
+            .save-bar .btn {
+                width: 100%;
+                text-align: center;
+                padding: 10px;
+            }
+
+            .stats-cards {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+
+            .stat-card {
+                padding: 12px 14px;
+                border-radius: 10px;
+            }
+
+            .sc-label {
+                font-size: .7rem;
+            }
+
+            .sc-value {
+                font-size: 1.4rem;
+            }
+
+            .sc-sub {
+                font-size: .72rem;
+            }
+
+            .person-card {
+                border-radius: 10px;
+                margin-bottom: 10px;
+            }
+
+            .pc-header {
+                padding: 10px 14px;
+                gap: 8px;
+            }
+
+            .pc-name {
+                font-size: .85rem;
+            }
+
+            .pc-total {
+                font-size: .7rem;
+            }
+
+            .pc-body {
+                padding: 10px 14px;
+                gap: 6px;
+            }
+
+            .pc-day-row {
+                gap: 8px;
+            }
+
+            .pc-day-lbl {
+                font-size: .7rem;
+                padding: 2px 6px;
+                min-width: 32px;
+            }
+
+            .range-pill {
+                font-size: .68rem;
+                padding: 2px 6px;
+            }
+
+            .popup-box {
+                width: 95%;
+                padding: 18px;
+                border-radius: 14px;
+            }
+
+            .popup-title {
+                font-size: .95rem;
+            }
+
+            .popup-sub {
+                font-size: .75rem;
+                margin-bottom: 14px;
+            }
+
+            .ppl-row {
+                padding: 6px 10px;
+                gap: 8px;
+            }
+
+            .ppl-av {
+                width: 28px;
+                height: 28px;
+            }
+
+            .ppl-name {
+                font-size: .82rem;
+            }
+
+            .login-cta {
+                padding: 40px 16px;
+            }
+
+            .login-cta h3 {
+                font-size: 1.05rem;
+            }
+
+            .login-cta p {
+                font-size: .82rem;
+            }
+
+            .sync-dot {
+                font-size: .7rem;
+                padding: 3px 8px;
+            }
+
+            .toast {
+                font-size: .82rem;
+                padding: 10px 18px;
+                bottom: 16px;
+                max-width: 90vw;
+                white-space: normal;
+                text-align: center;
+            }
+
+            .user-chip {
+                font-size: .72rem;
+                padding: 2px 8px 2px 2px;
+                gap: 5px;
+            }
+
+            .btn-google {
+                padding: 6px 12px;
+                font-size: .78rem;
+                gap: 6px;
+            }
+
+            .btn-google svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        /* ── RESPONSIVE: TINY SCREEN ── */
+        @media (max-width: 360px) {
+            .header-inner {
+                height: 48px;
+                padding: 0 8px;
+            }
+
+            .logo {
+                font-size: .85rem;
+            }
+
+            nav .tab-btn {
+                padding: 4px 8px;
+                font-size: .7rem;
+            }
+
+            main {
+                padding: 12px 8px;
+            }
+
+            .page-title {
+                font-size: 1rem;
+            }
+
+            .grid-header,
+            .grid-row,
+            .ov-header,
+            .ov-row {
+                grid-template-columns: 38px repeat(7, minmax(36px, 1fr));
+                min-width: 290px;
+            }
+
+            .slot,
+            .ov-cell {
+                height: 34px;
+            }
+
+            .time-label {
+                height: 34px;
+                font-size: .6rem;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+
+            .sc-value {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div class="logo">
+                <img src="PolyVoice.jpg" alt="PolyVoice Logo">
+                PolyVoice
+            </div>
+            <nav>
+                <button class="tab-btn active" id="tab-register" onclick="switchTab('register')"><span
+                        class="tab-icon">📅</span> <span>Lịch Rảnh</span></button>
+                <button class="tab-btn" id="tab-overview" onclick="switchTab('overview')"><span
+                        class="tab-icon">👥</span> <span>Tổng Hợp</span></button>
+                <button class="tab-btn" id="tab-stats" onclick="switchTab('stats')"><span class="tab-icon">📊</span>
+                    <span>Thống Kê</span></button>
+            </nav>
+            <div class="auth-area" id="auth-area">
+                <button class="btn-google" onclick="loginGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 18 18">
+                        <path
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                            fill="#4285F4" />
+                        <path
+                            d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                            fill="#34A853" />
+                        <path
+                            d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"
+                            fill="#EA4335" />
+                    </svg>
+                    Đăng nhập Google
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- ── TAB 1: ĐĂNG KÝ ── -->
+        <div class="tab-panel active" id="panel-register">
+            <h1 class="page-title">Đăng Ký Lịch Rảnh</h1>
+            <p class="page-subtitle">Chọn chế độ, nhấn vào ô để đánh dấu. Nhấn lại ô đúng chế độ để xóa. Nhấn ô đang có
+                chế độ khác để chuyển đổi.</p>
+
+            <div id="login-wall">
+                <div class="login-cta">
+                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                        <circle cx="28" cy="28" r="28" fill="#dbeafe" />
+                        <path d="M20 30c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#1d4ed8" stroke-width="2.5"
+                            stroke-linecap="round" />
+                        <circle cx="28" cy="22" r="4" stroke="#1d4ed8" stroke-width="2.5" />
+                        <rect x="18" y="36" width="20" height="3" rx="1.5" fill="#93c5fd" />
+                    </svg>
+                    <h3>Đăng nhập để đăng ký lịch rảnh</h3>
+                    <p>Bạn cần đăng nhập bằng tài khoản Google để đăng ký và lưu lịch rảnh.</p>
+                    <button class="btn-google" onclick="loginGoogle()">
+                        <svg width="18" height="18" viewBox="0 0 18 18">
+                            <path
+                                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                                fill="#4285F4" />
+                            <path
+                                d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                                fill="#34A853" />
+                            <path
+                                d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                                fill="#FBBC05" />
+                            <path
+                                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"
+                                fill="#EA4335" />
+                        </svg>
+                        Đăng nhập với Google
+                    </button>
+                </div>
+            </div>
+
+            <div id="reg-content" style="display:none">
+                <div class="week-nav">
+                    <button class="arrow-btn" id="reg-prev" onclick="changeWeek('reg',-1)">&#8592;</button>
+                    <div>
+                        <h2 id="reg-week-lbl">Tuần này</h2>
+                        <span class="week-range" id="reg-week-rng"></span>
+                    </div>
+                    <div style="flex:1"></div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--blue-500)"></div>Online
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:var(--amber)"></div>Offline
+                        </div>
+                    </div>
+                    <button class="arrow-btn" id="reg-next" onclick="changeWeek('reg',1)">&#8594;</button>
+                </div>
+
+                <div class="mode-selector">
+                    <span class="mode-lbl">Chế độ:</span>
+                    <button class="mode-btn online active" id="mode-online" onclick="setMode('online')">
+                        <div class="mode-dot online"></div>Online
+                    </button>
+                    <button class="mode-btn offline" id="mode-offline" onclick="setMode('offline')">
+                        <div class="mode-dot offline"></div>Offline
+                    </button>
+                </div>
+
+                <div class="schedule-grid">
+                    <div class="grid-header" id="reg-hdr"></div>
+                    <div id="reg-body"></div>
+                </div>
+
+                <div class="save-bar">
+                    <p>Nhấn <strong>Lưu Lịch</strong> để lưu và đồng bộ real-time lên Firebase.</p>
+                    <div class="sync-dot idle" id="sync-indicator">
+                        <span class="sync-pulse"></span>
+                        <span id="sync-text">Chưa lưu</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSchedule()">Lưu Lịch</button>
+                    <button class="btn btn-danger" onclick="clearAndSave()">Xóa &amp; Lưu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB 2: TỔNG HỢP ── -->
+        <div class="tab-panel" id="panel-overview">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+                <h1 class="page-title" style="margin:0">Tổng Hợp Lịch Rảnh</h1>
+                <span class="live-badge" id="ov-live-badge" style="display:none">
+                    <span class="live-blink"></span>Live
+                </span>
+            </div>
+            <p class="page-subtitle">Dữ liệu cập nhật real-time. Nhấn vào khung giờ để xem ai đang rảnh.</p>
+
+            <div class="week-nav">
+                <button class="arrow-btn" onclick="changeWeek('ov',-1)">&#8592;</button>
+                <div>
+                    <h2 id="ov-week-lbl">Tuần này</h2>
+                    <span class="week-range" id="ov-week-rng"></span>
+                </div>
+                <div style="flex:1"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--blue-100);border:1.5px solid var(--blue-400)">
+                        </div>Ít người
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--blue-300)"></div>Nhiều người
+                    </div>
+                </div>
+                <button class="arrow-btn" onclick="changeWeek('ov',1)">&#8594;</button>
+            </div>
+
+            <div class="overview-grid">
+                <div class="ov-header" id="ov-hdr"></div>
+                <div id="ov-body"></div>
+            </div>
+        </div>
+
+        <!-- ── TAB 3: THỐNG KÊ ── -->
+        <div class="tab-panel" id="panel-stats">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+                <h1 class="page-title" style="margin:0">Thống Kê Lịch Rảnh</h1>
+                <span class="live-badge" id="st-live-badge" style="display:none">
+                    <span class="live-blink"></span>Live
+                </span>
+            </div>
+            <p class="page-subtitle">Lịch sử và thống kê lịch rảnh của từng người, cập nhật real-time.</p>
+
+            <div class="week-nav">
+                <button class="arrow-btn" onclick="changeWeek('st',-1)">&#8592;</button>
+                <div>
+                    <h2 id="st-week-lbl">Tuần này</h2>
+                    <span class="week-range" id="st-week-rng"></span>
+                </div>
+                <div style="flex:1"></div>
+                <button class="arrow-btn" onclick="changeWeek('st',1)">&#8594;</button>
+            </div>
+
+            <div class="stats-cards" id="stats-cards"></div>
+            <div id="pwt-body"></div>
+        </div>
+    </main>
+
+    <!-- Popup -->
+    <div class="popup-overlay" id="popup" style="display:none" onclick="closePopup(event)">
+        <div class="popup-box" onclick="event.stopPropagation()">
+            <div class="popup-title" id="popup-title"></div>
+            <div class="popup-sub" id="popup-sub"></div>
+            <div id="popup-body"></div>
+            <button class="popup-close" onclick="document.getElementById('popup').style.display='none'">Đóng</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ════════════════════════════════════════════════
+        //  CONSTANTS
+        // ════════════════════════════════════════════════
+        const TIME_SLOTS = [];
+        for (let h = 7; h <= 22; h++) {
+            TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
+            if (h < 22) TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
+        }
+        const DAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        const DAY_FULL = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
+
+        // ════════════════════════════════════════════════
+        //  STATE
+        // ════════════════════════════════════════════════
+        let user = null;
+        let mode = 'online';
+        let off = { reg: 0, ov: 0, st: 0 };
+        let mySlots = {};           // local copy: { wk: { "d_HH:MM": mode } }
+        let allData = {};           // cache from Firebase: { wk: { uid: {...} } }
+        let activeListeners = {};     // Firebase listeners keyed by wk
+
+        // ════════════════════════════════════════════════
+        //  DATE HELPERS
+        // ════════════════════════════════════════════════
+        function weekStart(delta = 0) {
+            const n = new Date(), d = n.getDay(), diff = d === 0 ? -6 : 1 - d;
+            const m = new Date(n); m.setDate(n.getDate() + diff + delta * 7); m.setHours(0, 0, 0, 0);
+            return m;
+        }
+        function weekDates(delta = 0) {
+            const s = weekStart(delta);
+            return Array.from({ length: 7 }, (_, i) => { const d = new Date(s); d.setDate(s.getDate() + i); return d; });
+        }
+        function isoWeek(d) {
+            const u = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            u.setUTCDate(u.getUTCDate() + 4 - (u.getUTCDay() || 7));
+            return Math.ceil((((u - new Date(Date.UTC(u.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
+        }
+        function wKey(delta = 0) {
+            const s = weekStart(delta);
+            return `${s.getFullYear()}-W${String(isoWeek(s)).padStart(2, '0')}`;
+        }
+        function fmt(d) { return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; }
+        function wRange(delta = 0) { const ds = weekDates(delta); return `${fmt(ds[0])} — ${fmt(ds[6])}`; }
+        function wLabel(delta) {
+            if (delta === 0) return 'Tuần này';
+            if (delta === 1) return 'Tuần sau';
+            if (delta === -1) return 'Tuần trước';
+            return delta > 0 ? `Tuần +${delta}` : `Tuần ${delta}`;
+        }
+        function isPast(d) { const n = new Date(); n.setHours(0, 0, 0, 0); return d < n; }
+
+        // ════════════════════════════════════════════════
+        //  FIREBASE HELPERS
+        // ════════════════════════════════════════════════
+        function fbRef(path) { return window._fb.ref(window._fb.db, path); }
+
+        // Lắng nghe một tuần — tự động re-render khi có thay đổi
+        function listenWeek(wk) {
+            const { onValue, ref: fbRefFn, db } = window._fb;
+            if (activeListeners[wk]) return;
+
+            const r = fbRefFn(db, `schedules/${wk}`);
+            const unsubscribe = onValue(r, snap => {
+                allData[wk] = snap.val() || {};
+                if (off.ov === offsetOf(wk)) renderOv();
+                if (off.st === offsetOf(wk)) renderSt();
+                if (off.reg === offsetOf(wk)) renderReg();
+            });
+            activeListeners[wk] = unsubscribe;
+        }
+
+        function offsetOf(wk) {
+            // tìm offset ứng với weekKey này
+            for (let i = -10; i <= 52; i++) { if (wKey(i) === wk) return i; }
+            return null;
+        }
+
+        // Ghi dữ liệu của user lên Firebase
+        async function fbWrite(wk, slots) {
+            const { set: fbSet, ref: fbRefFn, db } = window._fb;
+            setSyncState('saving');
+            try {
+                const path = `schedules/${wk}/${user.uid}`;
+                if (Object.keys(slots).length === 0) {
+                    await window._fb.remove(fbRefFn(db, path));
+                } else {
+                    await fbSet(fbRefFn(db, path), {
+                        name: user.displayName,
+                        photo: user.photoURL || '',
+                        email: user.email,
+                        slots
+                    });
+                }
+                setSyncState('saved');
+                setTimeout(() => setSyncState('live'), 2000);
+            } catch (e) {
+                console.error('Firebase write error:', e);
+                setSyncState('error');
+            }
+        }
+
+        function setSyncState(state) {
+            const el = document.getElementById('sync-indicator');
+            const tx = document.getElementById('sync-text');
+            if (!el) return;
+            el.className = `sync-dot ${state}`;
+            const labels = { idle: 'Chưa lưu', saving: 'Đang lưu…', saved: 'Đã lưu', error: 'Lỗi lưu!', live: 'Real-time' };
+            tx.textContent = labels[state] || '';
+        }
+
+        // ════════════════════════════════════════════════
+        //  AUTH
+        // ════════════════════════════════════════════════
+        function loginGoogle() {
+            const { auth, GoogleAuthProvider, signInWithPopup } = window._fb;
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider).catch(e => {
+                toast('Đăng nhập thất bại: ' + e.message);
+            });
+        }
+
+        function logoutUser() {
+            const { auth, signOut } = window._fb;
+            signOut(auth);
+        }
+
+        function setUser(u) {
+            user = u;
+            const name = u.displayName || u.email;
+            document.getElementById('auth-area').innerHTML = `
+    <div class="user-chip">${avHTML(name, u.photoURL, 28)} ${name.split(' ').at(-1)}</div>
+    <button class="btn btn-outline" onclick="logoutUser()">Đăng xuất</button>`;
+            document.getElementById('login-wall').style.display = 'none';
+            document.getElementById('reg-content').style.display = 'block';
+            // Load lịch cũ của mình từ localStorage
+            const saved = localStorage.getItem('ft_my_' + u.uid);
+            mySlots = saved ? JSON.parse(saved) : {};
+            renderReg();
+            // Bắt đầu lắng nghe tuần hiện tại
+            listenWeek(wKey(off.reg));
+            listenWeek(wKey(off.ov));
+            listenWeek(wKey(off.st));
+            // Hiện live badge
+            document.getElementById('ov-live-badge').style.display = 'inline-flex';
+            document.getElementById('st-live-badge').style.display = 'inline-flex';
+        }
+
+        function clearUserUI() {
+            user = null;
+            document.getElementById('auth-area').innerHTML = `
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+      Đăng nhập Google</button>`;
+            document.getElementById('login-wall').style.display = 'block';
+            document.getElementById('reg-content').style.display = 'none';
+            document.getElementById('ov-live-badge').style.display = 'none';
+            document.getElementById('st-live-badge').style.display = 'none';
+        }
+
+
+
+        // ════════════════════════════════════════════════
+        //  AVATAR HELPER
+        // ════════════════════════════════════════════════
+        function avHTML(name, photo, size = 28) {
+            const s = `border-radius:50%;width:${size}px;height:${size}px;flex-shrink:0;`;
+            return photo
+                ? `<img src="${photo}" style="${s}object-fit:cover" referrerpolicy="no-referrer">`
+                : `<div style="${s}background:var(--blue-200);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size * .38)}px;color:var(--blue-800)">${(name || '?')[0]}</div>`;
+        }
+
+        // ════════════════════════════════════════════════
+        //  TABS
+        // ════════════════════════════════════════════════
+        function switchTab(name) {
+            ['register', 'overview', 'stats'].forEach(n => {
+                document.getElementById('tab-' + n).classList.toggle('active', n === name);
+                document.getElementById('panel-' + n).classList.toggle('active', n === name);
+            });
+            if (name === 'overview') { listenWeek(wKey(off.ov)); renderOv(); }
+            if (name === 'stats') { listenWeek(wKey(off.st)); renderSt(); }
+        }
+
+        // ════════════════════════════════════════════════
+        //  MODE
+        // ════════════════════════════════════════════════
+        function setMode(m) {
+            mode = m;
+            document.getElementById('mode-online').classList.toggle('active', m === 'online');
+            document.getElementById('mode-offline').classList.toggle('active', m === 'offline');
+        }
+
+        // ════════════════════════════════════════════════
+        //  WEEK CHANGE
+        // ════════════════════════════════════════════════
+        function changeWeek(tab, d) {
+            if (tab === 'reg' && off.reg + d < 0) return;
+            off[tab] += d;
+            const newWk = wKey(off[tab]);
+            listenWeek(newWk); // subscribe tuần mới nếu chưa có
+            if (tab === 'reg') renderReg();
+            if (tab === 'ov') renderOv();
+            if (tab === 'st') renderSt();
+        }
+
+        // ════════════════════════════════════════════════
+        //  REGISTER GRID
+        // ════════════════════════════════════════════════
+        function renderReg() {
+            const dates = weekDates(off.reg), now = new Date();
+            const wk = wKey(off.reg);
+            const sl = mySlots[wk] || {};
+
+            // Header
+            let h = `<div class="ghc time-col">Giờ</div>`;
+            dates.forEach((d, i) => {
+                const today = d.toDateString() === now.toDateString();
+                h += `<div class="ghc${today ? ' today-col' : ''}"><span class="day-num">${d.getDate()}</span><span class="day-name">${DAY_SHORT[i]}</span></div>`;
+            });
+            document.getElementById('reg-hdr').innerHTML = h;
+
+            // Body
+            const body = document.getElementById('reg-body');
+            body.innerHTML = '';
+            TIME_SLOTS.forEach(t => {
+                const row = document.createElement('div');
+                row.className = 'grid-row';
+                row.innerHTML = `<div class="time-label">${t}</div>`;
+                dates.forEach((d, di) => {
+                    const past = isPast(d);
+                    const k = `${di}_${t}`;
+                    const m2 = sl[k];
+                    const cell = document.createElement('div');
+                    cell.className = 'slot' + (past ? ' past' : '') + (m2 === 'online' ? ' sel-online' : m2 === 'offline' ? ' sel-offline' : '');
+                    if (m2) cell.innerHTML = `<div class="slot-dot ${m2}"></div>`;
+                    if (!past) cell.onclick = () => toggleSlot(di, t, cell, wk);
+                    row.appendChild(cell);
+                });
+                body.appendChild(row);
+            });
+
+            document.getElementById('reg-week-lbl').textContent = wLabel(off.reg);
+            document.getElementById('reg-week-rng').textContent = wRange(off.reg);
+            document.getElementById('reg-prev').disabled = off.reg <= 0;
+        }
+
+        function toggleSlot(di, t, cell, wk) {
+            if (!mySlots[wk]) mySlots[wk] = {};
+            const k = `${di}_${t}`;
+            const cur = mySlots[wk][k];
+            if (cur === mode) {
+                delete mySlots[wk][k];
+                cell.className = 'slot';
+                cell.innerHTML = '';
+            } else {
+                mySlots[wk][k] = mode;
+                cell.className = `slot sel-${mode}`;
+                cell.innerHTML = `<div class="slot-dot ${mode}"></div>`;
+            }
+            setSyncState('idle');
+        }
+
+        async function saveSchedule() {
+            if (!user) { toast('Vui lòng đăng nhập trước!'); return; }
+            const wk = wKey(off.reg);
+            const slots = mySlots[wk] || {};
+            localStorage.setItem('ft_my_' + user.uid, JSON.stringify(mySlots));
+            await fbWrite(wk, slots);
+            toast('Đã lưu và đồng bộ real-time!');
+        }
+
+        async function clearAndSave() {
+            if (!user) return;
+            mySlots[wKey(off.reg)] = {};
+            renderReg();
+            await saveSchedule();
+        }
+
+        // ════════════════════════════════════════════════
+        //  OVERVIEW
+        // ════════════════════════════════════════════════
+        function renderOv() {
+            const dates = weekDates(off.ov), now = new Date();
+            const wk = wKey(off.ov);
+            const wd = allData[wk] || {};
+
+            let h = `<div class="ghc time-col" style="background:var(--blue-900)">Giờ</div>`;
+            dates.forEach((d, i) => {
+                const today = d.toDateString() === now.toDateString();
+                h += `<div class="ghc${today ? ' today-col' : ''}"><span class="day-num">${d.getDate()}</span><span class="day-name">${DAY_SHORT[i]}</span></div>`;
+            });
+            document.getElementById('ov-hdr').innerHTML = h;
+
+            const body = document.getElementById('ov-body');
+            body.innerHTML = '';
+            TIME_SLOTS.forEach(t => {
+                const row = document.createElement('div');
+                row.className = 'ov-row';
+                row.innerHTML = `<div class="time-label">${t}</div>`;
+                dates.forEach((d, di) => {
+                    const k = `${di}_${t}`;
+                    const ppl = Object.values(wd).filter(u => u.slots && u.slots[k])
+                        .map(u => ({ name: u.name, photo: u.photo, mode: u.slots[k] }));
+                    const cell = document.createElement('div');
+                    cell.className = 'ov-cell' + (ppl.length >= 3 ? ' many-people' : ppl.length > 0 ? ' few-people' : '');
+                    if (ppl.length) {
+                        cell.innerHTML = `<div class="ov-badge">${ppl.length}</div>`;
+                        cell.onclick = () => showPopup(dates[di], t, ppl);
+                    }
+                    row.appendChild(cell);
+                });
+                body.appendChild(row);
+            });
+
+            document.getElementById('ov-week-lbl').textContent = wLabel(off.ov);
+            document.getElementById('ov-week-rng').textContent = wRange(off.ov);
+        }
+
+        function showPopup(date, t, ppl) {
+            const di = date.getDay() === 0 ? 6 : date.getDay() - 1;
+            document.getElementById('popup-title').textContent = `Người rảnh lúc ${t}`;
+            document.getElementById('popup-sub').textContent = `${DAY_FULL[di]}, ${fmt(date)}`;
+            const onl = ppl.filter(p => p.mode === 'online');
+            const ofl = ppl.filter(p => p.mode === 'offline');
+            let html = '';
+            if (onl.length) {
+                html += `<div class="ppl-section"><div class="ppl-label">Online — ${onl.length} người</div><div class="ppl-list">`;
+                onl.forEach(p => html += `<div class="ppl-row"><div class="ppl-av">${p.photo ? `<img src="${p.photo}" referrerpolicy="no-referrer">` : (p.name || '?')[0]}</div><span class="ppl-name">${p.name}</span><span class="mode-tag online">Online</span></div>`);
+                html += `</div></div>`;
+            }
+            if (ofl.length) {
+                html += `<div class="ppl-section"><div class="ppl-label">Offline — ${ofl.length} người</div><div class="ppl-list">`;
+                ofl.forEach(p => html += `<div class="ppl-row"><div class="ppl-av">${p.photo ? `<img src="${p.photo}" referrerpolicy="no-referrer">` : (p.name || '?')[0]}</div><span class="ppl-name">${p.name}</span><span class="mode-tag offline">Offline</span></div>`);
+                html += `</div></div>`;
+            }
+            document.getElementById('popup-body').innerHTML = html;
+            document.getElementById('popup').style.display = 'flex';
+        }
+
+        function closePopup(e) {
+            if (e.target === document.getElementById('popup'))
+                document.getElementById('popup').style.display = 'none';
+        }
+
+        // ════════════════════════════════════════════════
+        //  STATS
+        // ════════════════════════════════════════════════
+        function groupRanges(slots, dayIdx) {
+            const daySlots = TIME_SLOTS
+                .map((t, i) => ({ t, i, mode: slots[`${dayIdx}_${t}`] }))
+                .filter(s => s.mode);
+            const ranges = [];
+            let i = 0;
+            while (i < daySlots.length) {
+                const start = daySlots[i];
+                let j = i;
+                while (j + 1 < daySlots.length &&
+                    daySlots[j + 1].i === daySlots[j].i + 1 &&
+                    daySlots[j + 1].mode === start.mode) { j++; }
+                const endTime = addMins(TIME_SLOTS[daySlots[j].i], 30);
+                ranges.push({ start: start.t, end: endTime, mode: start.mode });
+                i = j + 1;
+            }
+            return ranges;
+        }
+
+        function addMins(timeStr, mins) {
+            const [h, m] = timeStr.split(':').map(Number);
+            const total = h * 60 + m + mins;
+            return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+        }
+
+        function renderSt() {
+            const wk = wKey(off.st);
+            const wd = allData[wk] || {};
+            const dates = weekDates(off.st);
+
+            document.getElementById('st-week-lbl').textContent = wLabel(off.st);
+            document.getElementById('st-week-rng').textContent = wRange(off.st);
+
+            const all = Object.values(wd).flatMap(u => Object.values(u.slots || {}));
+            const tot = Object.keys(wd).length;
+            const onl = all.filter(m => m === 'online').length;
+            const ofl = all.filter(m => m === 'offline').length;
+            const cnt = {};
+            Object.values(wd).forEach(u => Object.keys(u.slots || {}).forEach(k => { cnt[k] = (cnt[k] || 0) + 1; }));
+            let pk = '', pkc = 0;
+            Object.entries(cnt).forEach(([k, v]) => { if (v > pkc) { pkc = v; pk = k; } });
+            let pkLbl = '—';
+            if (pk) { const [di, t] = pk.split('_'); pkLbl = `${DAY_SHORT[+di]} ${t}`; }
+
+            document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card"><div class="sc-label">Tổng người</div><div class="sc-value">${tot}</div><div class="sc-sub">Đã đăng ký tuần này</div></div>
+    <div class="stat-card"><div class="sc-label">Slot Online</div><div class="sc-value" style="color:var(--blue-600)">${onl}</div><div class="sc-sub">Tổng khung giờ online</div></div>
+    <div class="stat-card"><div class="sc-label">Slot Offline</div><div class="sc-value" style="color:var(--amber-dk)">${ofl}</div><div class="sc-sub">Tổng khung giờ offline</div></div>
+    <div class="stat-card"><div class="sc-label">Giờ đông nhất</div><div class="sc-value" style="font-size:1.25rem">${pkLbl}</div><div class="sc-sub">${pkc} người rảnh cùng lúc</div></div>`;
+
+            const pb = document.getElementById('pwt-body');
+            if (!tot) {
+                pb.innerHTML = `<div style="padding:32px;text-align:center;color:var(--gray-400);font-size:.9rem;background:var(--white);border-radius:14px;border:1.5px solid var(--blue-100)">Chưa có ai đăng ký lịch tuần này.</div>`;
+                return;
+            }
+            pb.innerHTML = '';
+
+            Object.values(wd).forEach(u => {
+                const totalSlots = Object.keys(u.slots || {}).length;
+                const totalHours = (totalSlots * 0.5).toFixed(1).replace('.0', '');
+                const card = document.createElement('div');
+                card.className = 'person-card';
+                card.innerHTML = `<div class="pc-header">${avHTML(u.name, u.photo, 30)}<span class="pc-name">${u.name}</span><span class="pc-total">Tổng: ${totalHours}h rảnh</span></div>`;
+                const bodyDiv = document.createElement('div');
+                bodyDiv.className = 'pc-body';
+                let hasAny = false;
+                for (let di = 0; di < 7; di++) {
+                    const ranges = groupRanges(u.slots || {}, di);
+                    if (!ranges.length) continue;
+                    hasAny = true;
+                    const dayRow = document.createElement('div');
+                    dayRow.className = 'pc-day-row';
+                    dayRow.innerHTML = `<div class="pc-day-lbl">${DAY_SHORT[di]}<br><span style="font-weight:400;font-size:.68rem;color:var(--gray-500)">${fmt(dates[di])}</span></div>`;
+                    const rangesDiv = document.createElement('div');
+                    rangesDiv.className = 'pc-ranges';
+                    ranges.forEach(r => {
+                        rangesDiv.innerHTML += `<span class="range-pill ${r.mode}"><span class="range-dot ${r.mode}"></span>${r.start}–${r.end}</span>`;
+                    });
+                    dayRow.appendChild(rangesDiv);
+                    bodyDiv.appendChild(dayRow);
+                }
+                if (!hasAny) bodyDiv.innerHTML = `<div class="pc-empty">Không có slot nào tuần này.</div>`;
+                card.appendChild(bodyDiv);
+                pb.appendChild(card);
+            });
+        }
+
+        // ════════════════════════════════════════════════
+        //  TOAST
+        // ════════════════════════════════════════════════
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2800);
+        }
+
+        // ════════════════════════════════════════════════
+        //  BOOT
+        // ════════════════════════════════════════════════
+        window._initApp = function () {
+            const { auth, onAuthStateChanged } = window._fb;
+            renderOv(); renderSt();
+            onAuthStateChanged(auth, fbUser => {
+                if (fbUser) setUser(fbUser);
+                else clearUserUI();
+            });
+        };
+
+
+    </script>
+</body>
+
+</html>
