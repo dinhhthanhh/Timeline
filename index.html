@@ -1632,8 +1632,8 @@
                     <p>Bấm <strong>Lưu Lịch</strong> để cập nhật ngay cho cả nhóm nhé!</p>
                     <div class="save-bar-btns">
                         <button class="btn btn-primary" onclick="saveSchedule()">Lưu Lịch</button>
-                        <button class="btn btn-danger" style="border:1.5px solid #fca5a5" onclick="clearAndSave()">Xóa
-                            &amp; Lưu</button>
+                        <button class="btn btn-danger" style="border:1.5px solid #fca5a5"
+                            onclick="resetDraft()">Xóa</button>
                     </div>
                     <div class="sync-dot idle" id="sync-indicator">
                         <span class="sync-pulse"></span>
@@ -2169,11 +2169,14 @@
             }
         }
 
-        async function clearAndSave() {
+        function resetDraft() {
             if (!user) return;
-            mySlots[wKey(off.reg)] = {};
+            const wk = wKey(off.reg);
+            const serverSlots = (allData[wk] && allData[wk][user.uid]) ? (allData[wk][user.uid].slots || {}) : {};
+            mySlots[wk] = JSON.parse(JSON.stringify(serverSlots));
             renderReg();
-            await saveSchedule();
+            setSyncState('live');
+            toast('Đã hoàn tác các thay đổi chưa lưu.');
         }
 
         // OVERVIEW
