@@ -25,9 +25,7 @@
         import { getDatabase, ref, set, remove, onValue, off as dbOff }
             from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-        // ══════════════════════════════════════════════
-        //  CẤU HÌNH FIREBASE — thay bằng config của bạn
-        // ══════════════════════════════════════════════
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyADwiFZtYMc5IK3XXpJtJi8BAYZ2lN4zFQ",
             authDomain: "freetime-nhom.firebaseapp.com",
@@ -37,7 +35,6 @@
             messagingSenderId: "587528455829",
             appId: "1:587528455829:web:916928f1ec950d21337d9c"
         };
-        // ══════════════════════════════════════════════
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -469,10 +466,34 @@
             text-align: center;
             font-size: .8rem;
             font-weight: 600;
+            position: sticky;
+            top: 64px;
+            z-index: 20;
+            background: var(--blue-700);
+        }
+
+        @media (max-width: 768px) {
+            .ghc {
+                top: 56px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ghc {
+                top: 52px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .ghc {
+                top: 48px;
+            }
         }
 
         .ghc.time-col {
             background: var(--blue-900);
+            left: 0;
+            z-index: 30;
         }
 
         .ghc.today-col {
@@ -512,6 +533,10 @@
             color: var(--gray-400);
             background: var(--gray-50);
             border-right: 1.5px solid var(--blue-100);
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            box-shadow: 2px 0 4px rgba(0, 0, 0, 0.02);
         }
 
         .slot {
@@ -548,6 +573,28 @@
         .slot.sel-offline {
             background: var(--amber-bg);
             box-shadow: inset 0 0 0 2px var(--amber);
+        }
+
+        /* Preview styles for drag-select */
+        .slot.preview-sel-online {
+            background: var(--blue-50);
+            box-shadow: inset 0 0 0 2px var(--blue-300);
+        }
+
+        .slot.preview-sel-offline {
+            background: var(--amber-bg);
+            box-shadow: inset 0 0 0 2px var(--amber-dk);
+            opacity: 0.6;
+        }
+
+        .slot.preview-del {
+            background: #fef2f2;
+            box-shadow: inset 0 0 0 2px #f87171;
+            opacity: 0.8;
+        }
+
+        .slot.preview-del .slot-dot {
+            filter: grayscale(1) opacity(0.3);
         }
 
         .slot-dot {
@@ -703,6 +750,7 @@
             justify-content: center;
             cursor: pointer;
             transition: background .12s;
+            position: relative;
         }
 
         .ov-cell:hover {
@@ -731,27 +779,172 @@
             padding: 0 5px;
         }
 
+        .ov-av-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .ov-av-row {
+            display: flex;
+            justify-content: center;
+            gap: -4px;
+            /* Stack avatars slightly */
+            height: 20px;
+            width: 100%;
+        }
+
+        .mini-av {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1.5px solid var(--white);
+            object-fit: cover;
+            background: var(--blue-100);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--blue-800);
+            flex-shrink: 0;
+            margin-right: -4px;
+        }
+
+        .mini-av.online {
+            border-color: var(--blue-500);
+        }
+
+        .mini-av.offline {
+            border-color: var(--amber);
+        }
+
+        .more-count {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--gray-200);
+            color: var(--gray-600);
+            font-size: 9px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid var(--white);
+        }
+
         /* ── POPUP ── */
         .popup-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 30, 80, .18);
+            background: rgba(15, 30, 80, 0);
             z-index: 200;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeUp .2s;
+            justify-content: flex-end;
+            pointer-events: none;
+            transition: background 0.3s ease;
+        }
+
+        .popup-overlay.show {
+            background: rgba(15, 30, 80, 0.2);
+            pointer-events: auto;
         }
 
         .popup-box {
             background: var(--white);
-            border-radius: 16px;
-            box-shadow: var(--sh-lg);
-            padding: 28px;
-            min-width: 340px;
-            max-width: 480px;
-            width: 90%;
-            border: 1.5px solid var(--blue-100);
+            height: 100%;
+            width: 420px;
+            max-width: 90%;
+            box-shadow: -4px 0 24px rgba(29, 78, 216, 0.15);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-left: 1.5px solid var(--blue-100);
+            overflow: hidden;
+        }
+
+        .side-header {
+            padding: 24px 28px 16px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .side-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 28px;
+        }
+
+        .side-footer {
+            padding: 16px 28px 24px;
+            border-top: 1px solid var(--gray-100);
+            background: var(--gray-50);
+        }
+
+        .side-search-box {
+            margin-top: 12px;
+            position: relative;
+        }
+
+        .side-search-input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border-radius: 10px;
+            border: 1.5px solid var(--gray-200);
+            font-family: inherit;
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .side-search-input:focus {
+            border-color: var(--blue-500);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--blue-50);
+        }
+
+        .side-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            pointer-events: none;
+        }
+
+        .side-filter-tabs {
+            display: flex;
+            gap: 4px;
+            margin-top: 16px;
+            background: var(--gray-100);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .side-filter-btn {
+            flex: 1;
+            border: none;
+            background: none;
+            padding: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .side-filter-btn.active {
+            background: var(--white);
+            color: var(--blue-700);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .popup-overlay.show .popup-box {
+            transform: translateX(0);
         }
 
         .popup-title {
@@ -1057,8 +1250,25 @@
             animation: pulse 1.2s infinite;
         }
 
-        /* ── RESPONSIVE: TABLET ── */
+        /* ── RESPONSIVE CONSOLIDATION ── */
         @media (max-width: 768px) {
+            .desktop-nav {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            body {
+                padding-bottom: 80px;
+            }
+
+            header {
+                box-shadow: none;
+                border-bottom: 1.5px solid var(--gray-100);
+            }
+
             .header-inner {
                 padding: 0 16px;
                 height: 56px;
@@ -1073,15 +1283,6 @@
             .logo svg {
                 width: 26px;
                 height: 26px;
-            }
-
-            nav {
-                gap: 1px;
-            }
-
-            .tab-btn {
-                padding: 6px 12px;
-                font-size: .82rem;
             }
 
             main {
@@ -1106,24 +1307,23 @@
             .overview-grid {
                 border-radius: 12px;
                 overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
             }
 
             .grid-header,
             .grid-row,
             .ov-header,
             .ov-row {
-                grid-template-columns: 52px repeat(7, minmax(46px, 1fr));
-                min-width: 374px;
+                grid-template-columns: 60px repeat(7, minmax(50px, 1fr));
+                min-width: 410px;
             }
 
             .slot,
             .ov-cell {
-                height: 42px;
+                height: 56px;
             }
 
             .time-label {
-                height: 42px;
+                height: 56px;
                 font-size: .7rem;
                 padding: 0 6px;
             }
@@ -1131,30 +1331,40 @@
             .ghc {
                 padding: 8px 4px;
                 font-size: .72rem;
-            }
-
-            .ghc .day-num {
-                font-size: .95rem;
-            }
-
-            .ghc .day-name {
-                font-size: .62rem;
+                top: 56px !important;
             }
 
             .mode-selector {
+                margin-bottom: 20px;
                 flex-wrap: wrap;
                 gap: 6px;
             }
 
+            .mode-btn {
+                flex: 1;
+                justify-content: center;
+            }
+
             .save-bar {
-                flex-wrap: wrap;
-                gap: 10px;
-                padding: 12px 14px;
+                flex-direction: column;
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .save-bar-btns {
+                display: flex;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .save-bar-btns .btn {
+                flex: 1;
+                padding: 12px;
             }
 
             .save-bar p {
                 font-size: .82rem;
-                min-width: 100%;
+                text-align: center;
             }
 
             .stats-cards {
@@ -1170,106 +1380,47 @@
                 font-size: 1.6rem;
             }
 
-            .pc-ranges {
-                gap: 4px;
-            }
-
-            .range-pill {
-                font-size: .72rem;
-                padding: 2px 7px;
+            .toast {
+                bottom: 84px;
             }
 
             .popup-box {
-                min-width: auto;
-                width: 92%;
-                padding: 22px;
-            }
-
-            .legend {
-                gap: 10px;
-                font-size: .75rem;
-            }
-
-            .user-chip {
-                font-size: .78rem;
-                padding: 3px 10px 3px 3px;
-            }
-
-            .btn-google {
-                padding: 7px 14px;
-                font-size: .82rem;
+                width: 100%;
+                max-width: 100%;
+                border-left: none;
             }
         }
 
-        /* ── RESPONSIVE: SMALL PHONE ── */
         @media (max-width: 480px) {
             .header-inner {
                 height: 52px;
                 padding: 0 12px;
-                flex-wrap: wrap;
-                gap: 4px;
             }
 
             .logo {
                 font-size: .95rem;
-                gap: 6px;
             }
 
-            .logo svg {
-                width: 24px;
-                height: 24px;
+            .grid-header,
+            .grid-row,
+            .ov-header,
+            .ov-row {
+                grid-template-columns: 50px repeat(7, minmax(44px, 1fr));
+                min-width: 358px;
             }
 
-            nav .tab-btn {
-                padding: 5px 10px;
-                font-size: .76rem;
+            .ghc {
+                top: 52px !important;
             }
 
-            nav .tab-btn span {
-                display: none;
+            .slot,
+            .ov-cell,
+            .time-label {
+                height: 60px;
             }
+        }
 
-            .auth-area .btn {
-                padding: 6px 12px;
-                font-size: .78rem;
-            }
-
-            main {
-                padding: 16px 10px;
-            }
-
-            .page-title {
-                font-size: 1.1rem;
-            }
-
-            .page-subtitle {
-                font-size: .8rem;
-                margin-bottom: 16px;
-            }
-
-            .week-nav {
-                padding: 8px 10px;
-                gap: 8px;
-                margin-bottom: 16px;
-            }
-
-            .week-nav h2 {
-                font-size: .82rem;
-            }
-
-            .week-range {
-                font-size: .72rem;
-            }
-
-            .arrow-btn {
-                width: 30px;
-                height: 30px;
-                font-size: .85rem;
-            }
-
-            .legend {
-                display: none;
-            }
+        @media (max-width: 360px) {
 
             .grid-header,
             .grid-row,
@@ -1279,264 +1430,8 @@
                 min-width: 324px;
             }
 
-            .slot,
-            .ov-cell {
-                height: 38px;
-            }
-
-            .time-label {
-                height: 38px;
-                font-size: .65rem;
-                padding: 0 4px;
-            }
-
             .ghc {
-                padding: 6px 2px;
-                font-size: .68rem;
-            }
-
-            .ghc .day-num {
-                font-size: .85rem;
-            }
-
-            .ghc .day-name {
-                font-size: .58rem;
-                letter-spacing: 0;
-            }
-
-            .slot-dot {
-                width: 6px;
-                height: 6px;
-            }
-
-            .ov-badge {
-                min-width: 18px;
-                height: 18px;
-                font-size: .65rem;
-                padding: 0 3px;
-            }
-
-            .mode-selector {
-                gap: 5px;
-                margin-bottom: 12px;
-            }
-
-            .mode-lbl {
-                font-size: .72rem;
-            }
-
-            .mode-btn {
-                padding: 5px 12px;
-                font-size: .78rem;
-            }
-
-            .mode-dot {
-                width: 8px;
-                height: 8px;
-            }
-
-            .save-bar {
-                margin-top: 14px;
-                padding: 10px 12px;
-                gap: 8px;
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .save-bar p {
-                font-size: .78rem;
-                text-align: center;
-            }
-
-            .save-bar .btn {
-                width: 100%;
-                text-align: center;
-                padding: 10px;
-            }
-
-            .stats-cards {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-                margin-bottom: 20px;
-            }
-
-            .stat-card {
-                padding: 12px 14px;
-                border-radius: 10px;
-            }
-
-            .sc-label {
-                font-size: .7rem;
-            }
-
-            .sc-value {
-                font-size: 1.4rem;
-            }
-
-            .sc-sub {
-                font-size: .72rem;
-            }
-
-            .person-card {
-                border-radius: 10px;
-                margin-bottom: 10px;
-            }
-
-            .pc-header {
-                padding: 10px 14px;
-                gap: 8px;
-            }
-
-            .pc-name {
-                font-size: .85rem;
-            }
-
-            .pc-total {
-                font-size: .7rem;
-            }
-
-            .pc-body {
-                padding: 10px 14px;
-                gap: 6px;
-            }
-
-            .pc-day-row {
-                gap: 8px;
-            }
-
-            .pc-day-lbl {
-                font-size: .7rem;
-                padding: 2px 6px;
-                min-width: 32px;
-            }
-
-            .range-pill {
-                font-size: .68rem;
-                padding: 2px 6px;
-            }
-
-            .popup-box {
-                width: 95%;
-                padding: 18px;
-                border-radius: 14px;
-            }
-
-            .popup-title {
-                font-size: .95rem;
-            }
-
-            .popup-sub {
-                font-size: .75rem;
-                margin-bottom: 14px;
-            }
-
-            .ppl-row {
-                padding: 6px 10px;
-                gap: 8px;
-            }
-
-            .ppl-av {
-                width: 28px;
-                height: 28px;
-            }
-
-            .ppl-name {
-                font-size: .82rem;
-            }
-
-            .login-cta {
-                padding: 40px 16px;
-            }
-
-            .login-cta h3 {
-                font-size: 1.05rem;
-            }
-
-            .login-cta p {
-                font-size: .82rem;
-            }
-
-            .sync-dot {
-                font-size: .7rem;
-                padding: 3px 8px;
-            }
-
-            .toast {
-                font-size: .82rem;
-                padding: 10px 18px;
-                bottom: 16px;
-                max-width: 90vw;
-                white-space: normal;
-                text-align: center;
-            }
-
-            .user-chip {
-                font-size: .72rem;
-                padding: 2px 8px 2px 2px;
-                gap: 5px;
-            }
-
-            .btn-google {
-                padding: 6px 12px;
-                font-size: .78rem;
-                gap: 6px;
-            }
-
-            .btn-google svg {
-                width: 14px;
-                height: 14px;
-            }
-        }
-
-        /* ── RESPONSIVE: TINY SCREEN ── */
-        @media (max-width: 360px) {
-            .header-inner {
-                height: 48px;
-                padding: 0 8px;
-            }
-
-            .logo {
-                font-size: .85rem;
-            }
-
-            nav .tab-btn {
-                padding: 4px 8px;
-                font-size: .7rem;
-            }
-
-            main {
-                padding: 12px 8px;
-            }
-
-            .page-title {
-                font-size: 1rem;
-            }
-
-            .grid-header,
-            .grid-row,
-            .ov-header,
-            .ov-row {
-                grid-template-columns: 38px repeat(7, minmax(36px, 1fr));
-                min-width: 290px;
-            }
-
-            .slot,
-            .ov-cell {
-                height: 34px;
-            }
-
-            .time-label {
-                height: 34px;
-                font-size: .6rem;
-            }
-
-            .stats-cards {
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-
-            .sc-value {
-                font-size: 1.2rem;
+                top: 48px !important;
             }
         }
     </style>
@@ -1550,27 +1445,27 @@
                 <img src="PolyVoice.jpg" alt="PolyVoice Logo">
                 PolyVoice
             </div>
-            <nav>
+            <nav class="desktop-nav">
                 <button class="tab-btn active" id="tab-register" onclick="switchTab('register')"><svg class="tab-icon"
                         viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2" />
                         <line x1="16" y1="2" x2="16" y2="6" />
                         <line x1="8" y1="2" x2="8" y2="6" />
                         <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg> <span>Lịch Rảnh</span></button>
+                    </svg> <span>Cá nhân</span></button>
                 <button class="tab-btn" id="tab-overview" onclick="switchTab('overview')"><svg class="tab-icon"
                         viewBox="0 0 24 24">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg> <span>Tổng Hợp</span></button>
+                    </svg> <span>Cả nhóm</span></button>
                 <button class="tab-btn" id="tab-stats" onclick="switchTab('stats')"><svg class="tab-icon"
                         viewBox="0 0 24 24">
                         <line x1="18" y1="20" x2="18" y2="10" />
                         <line x1="12" y1="20" x2="12" y2="4" />
                         <line x1="6" y1="20" x2="6" y2="14" />
-                    </svg> <span>Thống Kê</span></button>
+                    </svg> <span>Xem nhanh</span></button>
             </nav>
             <div class="auth-area" id="auth-area">
                 <button class="btn-google" onclick="loginGoogle()">
@@ -1597,7 +1492,7 @@
     <main>
         <!-- ── TAB 1: ĐĂNG KÝ ── -->
         <div class="tab-panel active" id="panel-register">
-            <h1 class="page-title">Đăng Ký Lịch Rảnh</h1>
+            <h1 class="page-title">Cập nhật lịch rảnh</h1>
             <p class="page-subtitle">Chọn chế độ, nhấn vào ô để đánh dấu. Nhấn lại ô đúng chế độ để xóa. Nhấn ô đang có
                 chế độ khác để chuyển đổi.</p>
 
@@ -1667,13 +1562,16 @@
                 </div>
 
                 <div class="save-bar">
-                    <p>Nhấn <strong>Lưu Lịch</strong> để lưu và đồng bộ real-time lên Firebase.</p>
+                    <p>Nhấn <strong>Lưu Lịch</strong> để lưu và đồng bộ real-time.</p>
+                    <div class="save-bar-btns">
+                        <button class="btn btn-primary" onclick="saveSchedule()">Lưu Lịch</button>
+                        <button class="btn btn-danger" style="border:1.5px solid #fca5a5" onclick="clearAndSave()">Xóa
+                            &amp; Lưu</button>
+                    </div>
                     <div class="sync-dot idle" id="sync-indicator">
                         <span class="sync-pulse"></span>
                         <span id="sync-text">Chưa lưu</span>
                     </div>
-                    <button class="btn btn-primary" onclick="saveSchedule()">Lưu Lịch</button>
-                    <button class="btn btn-danger" onclick="clearAndSave()">Xóa &amp; Lưu</button>
                 </div>
             </div>
         </div>
@@ -1681,7 +1579,7 @@
         <!-- ── TAB 2: TỔNG HỢP ── -->
         <div class="tab-panel" id="panel-overview">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-                <h1 class="page-title" style="margin:0">Tổng Hợp Lịch Rảnh</h1>
+                <h1 class="page-title" style="margin:0">Cả nhóm</h1>
                 <span class="live-badge" id="ov-live-badge" style="display:none">
                     <span class="live-blink"></span>Live
                 </span>
@@ -1716,7 +1614,7 @@
         <!-- ── TAB 3: THỐNG KÊ ── -->
         <div class="tab-panel" id="panel-stats">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-                <h1 class="page-title" style="margin:0">Thống Kê Lịch Rảnh</h1>
+                <h1 class="page-title" style="margin:0">Xem nhanh</h1>
                 <span class="live-badge" id="st-live-badge" style="display:none">
                     <span class="live-blink"></span>Live
                 </span>
@@ -1741,19 +1639,73 @@
     <!-- Popup -->
     <div class="popup-overlay" id="popup" style="display:none" onclick="closePopup(event)">
         <div class="popup-box" onclick="event.stopPropagation()">
-            <div class="popup-title" id="popup-title"></div>
-            <div class="popup-sub" id="popup-sub"></div>
-            <div id="popup-body"></div>
-            <button class="popup-close" onclick="document.getElementById('popup').style.display='none'">Đóng</button>
+            <div class="side-header">
+                <div class="popup-title" id="popup-title"></div>
+                <div class="popup-sub" id="popup-sub"></div>
+
+                <div class="side-search-box">
+                    <svg class="side-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="side-search-input" id="side-search" placeholder="Tìm thành viên..."
+                        oninput="filterSideList()">
+                </div>
+
+                <div class="side-filter-tabs">
+                    <button class="side-filter-btn active" id="filter-all" onclick="setSideFilter('all')">Tất
+                        cả</button>
+                    <button class="side-filter-btn" id="filter-online" onclick="setSideFilter('online')">Online</button>
+                    <button class="side-filter-btn" id="filter-offline"
+                        onclick="setSideFilter('offline')">Offline</button>
+                </div>
+            </div>
+
+            <div class="side-content">
+                <div id="popup-body"></div>
+            </div>
+
+            <div class="side-footer">
+                <button class="popup-close" style="margin-top:0"
+                    onclick="closePopup({target: document.getElementById('popup')})">Đóng</button>
+            </div>
         </div>
     </div>
 
     <div class="toast" id="toast"></div>
 
+    <nav class="mobile-nav">
+        <button class="mobile-nav-btn active" id="m-tab-register" onclick="switchTab('register')">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span>Cá nhân</span>
+        </button>
+        <button class="mobile-nav-btn" id="m-tab-overview" onclick="switchTab('overview')">
+            <svg viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span>Cả nhóm</span>
+        </button>
+        <button class="mobile-nav-btn" id="m-tab-stats" onclick="switchTab('stats')">
+            <svg viewBox="0 0 24 24">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+            <span>Xem nhanh</span>
+        </button>
+    </nav>
+
     <script>
-        // ════════════════════════════════════════════════
-        //  CONSTANTS
-        // ════════════════════════════════════════════════
+        // CONSTANTS
         const TIME_SLOTS = [];
         for (let h = 7; h <= 22; h++) {
             TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
@@ -1762,19 +1714,16 @@
         const DAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
         const DAY_FULL = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 
-        // ════════════════════════════════════════════════
-        //  STATE
-        // ════════════════════════════════════════════════
+        // STATE
         let user = null;
         let mode = 'online';
         let off = { reg: 0, ov: 0, st: 0 };
         let mySlots = {};           // local copy: { wk: { "d_HH:MM": mode } }
         let allData = {};           // cache from Firebase: { wk: { uid: {...} } }
         let activeListeners = {};     // Firebase listeners keyed by wk
+        let sideData = { date: null, time: null, ppl: [], filter: 'all', search: '' };
 
-        // ════════════════════════════════════════════════
-        //  DATE HELPERS
-        // ════════════════════════════════════════════════
+        // DATE HELPERS
         function weekStart(delta = 0) {
             const n = new Date(), d = n.getDay(), diff = d === 0 ? -6 : 1 - d;
             const m = new Date(n); m.setDate(n.getDate() + diff + delta * 7); m.setHours(0, 0, 0, 0);
@@ -1803,9 +1752,7 @@
         }
         function isPast(d) { const n = new Date(); n.setHours(0, 0, 0, 0); return d < n; }
 
-        // ════════════════════════════════════════════════
-        //  FIREBASE HELPERS
-        // ════════════════════════════════════════════════
+        // FIREBASE HELPERS
         function fbRef(path) { return window._fb.ref(window._fb.db, path); }
 
         // Lắng nghe một tuần — tự động re-render khi có thay đổi
@@ -1876,13 +1823,11 @@
             const tx = document.getElementById('sync-text');
             if (!el) return;
             el.className = `sync-dot ${state}`;
-            const labels = { idle: 'Chưa lưu', saving: 'Đang lưu…', saved: 'Đã lưu', error: 'Lỗi lưu!', live: 'Real-time' };
+            const labels = { idle: 'Chưa lưu', saving: 'Đang lưu…', saved: 'Đã lưu', error: 'Lỗi lưu!', live: 'Dữ liệu mới nhất' };
             tx.textContent = labels[state] || '';
         }
 
-        // ════════════════════════════════════════════════
-        //  AUTH
-        // ════════════════════════════════════════════════
+        // AUTH
         function loginGoogle() {
             const { auth, GoogleAuthProvider, signInWithPopup } = window._fb;
             const provider = new GoogleAuthProvider();
@@ -1936,9 +1881,7 @@
 
 
 
-        // ════════════════════════════════════════════════
-        //  AVATAR HELPER
-        // ════════════════════════════════════════════════
+        // AVATAR HELPER
         function avHTML(name, photo, size = 28) {
             const s = `border-radius:50%;width:${size}px;height:${size}px;flex-shrink:0;`;
             return photo
@@ -1946,30 +1889,28 @@
                 : `<div style="${s}background:var(--blue-200);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size * .38)}px;color:var(--blue-800)">${(name || '?')[0]}</div>`;
         }
 
-        // ════════════════════════════════════════════════
-        //  TABS
-        // ════════════════════════════════════════════════
+        // TABS
         function switchTab(name) {
             ['register', 'overview', 'stats'].forEach(n => {
-                document.getElementById('tab-' + n).classList.toggle('active', n === name);
-                document.getElementById('panel-' + n).classList.toggle('active', n === name);
+                const btn = document.getElementById('tab-' + n);
+                const mBtn = document.getElementById('m-tab-' + n);
+                const panel = document.getElementById('panel-' + n);
+                if (btn) btn.classList.toggle('active', n === name);
+                if (mBtn) mBtn.classList.toggle('active', n === name);
+                if (panel) panel.classList.toggle('active', n === name);
             });
             if (name === 'overview') { listenWeek(wKey(off.ov)); renderOv(); }
             if (name === 'stats') { listenWeek(wKey(off.st)); renderSt(); }
         }
 
-        // ════════════════════════════════════════════════
-        //  MODE
-        // ════════════════════════════════════════════════
+        // MODE
         function setMode(m) {
             mode = m;
             document.getElementById('mode-online').classList.toggle('active', m === 'online');
             document.getElementById('mode-offline').classList.toggle('active', m === 'offline');
         }
 
-        // ════════════════════════════════════════════════
-        //  WEEK CHANGE
-        // ════════════════════════════════════════════════
+        // WEEK CHANGE
         function changeWeek(tab, d) {
             if (tab === 'reg' && off.reg + d < 0) return;
             off[tab] += d;
@@ -1980,9 +1921,7 @@
             if (tab === 'st') renderSt();
         }
 
-        // ════════════════════════════════════════════════
-        //  REGISTER GRID
-        // ════════════════════════════════════════════════
+        // REGISTER GRID
         function renderReg() {
             const dates = weekDates(off.reg), now = new Date();
             const wk = wKey(off.reg);
@@ -1999,6 +1938,12 @@
             // Body
             const body = document.getElementById('reg-body');
             body.innerHTML = '';
+
+            // Drag state
+            let isDragging = false;
+            let dragAction = null; // 'add' or 'remove'
+            let initialTargetMode = null;
+
             TIME_SLOTS.forEach(t => {
                 const row = document.createElement('div');
                 row.className = 'grid-row';
@@ -2009,12 +1954,76 @@
                     const m2 = sl[k];
                     const cell = document.createElement('div');
                     cell.className = 'slot' + (past ? ' past' : '') + (m2 === 'online' ? ' sel-online' : m2 === 'offline' ? ' sel-offline' : '');
+                    cell.dataset.key = k;
                     if (m2) cell.innerHTML = `<div class="slot-dot ${m2}"></div>`;
-                    if (!past) cell.onclick = () => toggleSlot(di, t, cell, wk);
+
+                    if (!past) {
+                        cell.onmousedown = (e) => startDrag(e, cell, wk);
+                        cell.onmouseenter = (e) => continueDrag(e, cell, wk);
+                        // Touch support
+                        cell.ontouchstart = (e) => { e.preventDefault(); startDrag(e.touches[0], cell, wk); };
+                    }
                     row.appendChild(cell);
                 });
                 body.appendChild(row);
             });
+
+            // Global mouse/touch up to end drag
+            const endDrag = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                // Apply all previews
+                document.querySelectorAll('.slot.preview-sel-online, .slot.preview-sel-offline, .slot.preview-del').forEach(c => {
+                    const k = c.dataset.key;
+                    if (c.classList.contains('preview-del')) {
+                        delete mySlots[wk][k];
+                    } else {
+                        mySlots[wk][k] = mode;
+                    }
+                });
+                renderReg();
+                setSyncState('idle');
+            };
+
+            const startDrag = (e, cell, wk) => {
+                isDragging = true;
+                const k = cell.dataset.key;
+                const curMode = mySlots[wk]?.[k];
+                initialTargetMode = curMode;
+                dragAction = (curMode === mode) ? 'remove' : 'add';
+                previewCell(cell);
+            };
+
+            const continueDrag = (e, cell, wk) => {
+                if (!isDragging) return;
+                previewCell(cell);
+            };
+
+            // For touch move
+            body.ontouchmove = (e) => {
+                if (!isDragging) return;
+                const touch = e.touches[0];
+                const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                const cell = el?.closest('.slot');
+                if (cell && !cell.classList.contains('past')) previewCell(cell);
+            };
+
+            const previewCell = (cell) => {
+                if (dragAction === 'remove') {
+                    if (cell.classList.contains(`sel-${mode}`)) {
+                        cell.classList.add('preview-del');
+                    }
+                } else {
+                    // if adding: if empty or different mode -> preview add
+                    if (!cell.classList.contains(`sel-${mode}`)) {
+                        cell.classList.add(`preview-sel-${mode}`);
+                        cell.classList.remove('preview-del');
+                    }
+                }
+            };
+
+            window.onmouseup = endDrag;
+            window.ontouchend = endDrag;
 
             document.getElementById('reg-week-lbl').textContent = wLabel(off.reg);
             document.getElementById('reg-week-rng').textContent = wRange(off.reg);
@@ -2060,9 +2069,7 @@
             await saveSchedule();
         }
 
-        // ════════════════════════════════════════════════
-        //  OVERVIEW
-        // ════════════════════════════════════════════════
+        // OVERVIEW
         function renderOv() {
             const dates = weekDates(off.ov), now = new Date();
             const wk = wKey(off.ov);
@@ -2087,8 +2094,32 @@
                         .map(u => ({ name: u.name, photo: u.photo, mode: u.slots[k] }));
                     const cell = document.createElement('div');
                     cell.className = 'ov-cell' + (ppl.length >= 3 ? ' many-people' : ppl.length > 0 ? ' few-people' : '');
+
                     if (ppl.length) {
-                        cell.innerHTML = `<div class="ov-badge">${ppl.length}</div>`;
+                        const onl = ppl.filter(p => p.mode === 'online');
+                        const ofl = ppl.filter(p => p.mode === 'offline');
+
+                        let html = '<div class="ov-av-group">';
+
+                        // Online row
+                        html += '<div class="ov-av-row">';
+                        onl.slice(0, 2).forEach(p => {
+                            html += `<div class="mini-av online" title="${p.name}">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;border-radius:50%" referrerpolicy="no-referrer">` : p.name[0]}</div>`;
+                        });
+                        if (onl.length > 2) html += `<div class="more-count" title="${onl.length - 2} người khác">+${onl.length - 2}</div>`;
+                        html += '</div>';
+
+                        // Offline row
+                        html += '<div class="ov-av-row">';
+                        ofl.slice(0, 2).forEach(p => {
+                            html += `<div class="mini-av offline" title="${p.name}">${p.photo ? `<img src="${p.photo}" style="width:100%;height:100%;border-radius:50%" referrerpolicy="no-referrer">` : p.name[0]}</div>`;
+                        });
+                        if (ofl.length > 2) html += `<div class="more-count" title="${ofl.length - 2} người khác">+${ofl.length - 2}</div>`;
+                        html += '</div>';
+
+                        html += '</div>';
+
+                        cell.innerHTML = html;
                         cell.onclick = () => showPopup(dates[di], t, ppl);
                     }
                     row.appendChild(cell);
@@ -2101,11 +2132,45 @@
         }
 
         function showPopup(date, t, ppl) {
+            sideData.date = date;
+            sideData.time = t;
+            sideData.ppl = ppl;
+            sideData.search = '';
+            sideData.filter = 'all';
+
+            document.getElementById('side-search').value = '';
+            document.querySelectorAll('.side-filter-btn').forEach(b => b.classList.toggle('active', b.id === 'filter-all'));
+
+            renderSideList();
+            document.getElementById('popup').classList.add('show');
+            document.getElementById('popup').style.display = 'flex';
+        }
+
+        function setSideFilter(f) {
+            sideData.filter = f;
+            document.querySelectorAll('.side-filter-btn').forEach(b => b.classList.toggle('active', b.id === `filter-${f}`));
+            renderSideList();
+        }
+
+        function filterSideList() {
+            sideData.search = document.getElementById('side-search').value.toLowerCase().trim();
+            renderSideList();
+        }
+
+        function renderSideList() {
+            const { date, time, ppl, filter, search } = sideData;
             const di = date.getDay() === 0 ? 6 : date.getDay() - 1;
-            document.getElementById('popup-title').textContent = `Người rảnh lúc ${t}`;
+
+            document.getElementById('popup-title').textContent = `Người rảnh lúc ${time}`;
             document.getElementById('popup-sub').textContent = `${DAY_FULL[di]}, ${fmt(date)}`;
-            const onl = ppl.filter(p => p.mode === 'online');
-            const ofl = ppl.filter(p => p.mode === 'offline');
+
+            let filtered = ppl;
+            if (filter !== 'all') filtered = filtered.filter(p => p.mode === filter);
+            if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+
+            const onl = filtered.filter(p => p.mode === 'online');
+            const ofl = filtered.filter(p => p.mode === 'offline');
+
             let html = '';
             if (onl.length) {
                 html += `<div class="ppl-section"><div class="ppl-label">Online — ${onl.length} người</div><div class="ppl-list">`;
@@ -2117,18 +2182,23 @@
                 ofl.forEach(p => html += `<div class="ppl-row"><div class="ppl-av">${p.photo ? `<img src="${p.photo}" referrerpolicy="no-referrer">` : (p.name || '?')[0]}</div><span class="ppl-name">${p.name}</span><span class="mode-tag offline">Offline</span></div>`);
                 html += `</div></div>`;
             }
+            if (!filtered.length) {
+                html = `<div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:0.9rem">Không tìm thấy ai rảnh${filter !== 'all' ? ` ${filter}` : ''}${search ? ` với tên "${search}"` : ''}</div>`;
+            }
             document.getElementById('popup-body').innerHTML = html;
-            document.getElementById('popup').style.display = 'flex';
         }
 
         function closePopup(e) {
             if (e.target === document.getElementById('popup'))
-                document.getElementById('popup').style.display = 'none';
+                document.getElementById('popup').classList.remove('show');
+            setTimeout(() => {
+                if (!document.getElementById('popup').classList.contains('show')) {
+                    document.getElementById('popup').style.display = 'none';
+                }
+            }, 400);
         }
 
-        // ════════════════════════════════════════════════
-        //  STATS
-        // ════════════════════════════════════════════════
+        // STATS
         function groupRanges(slots, dayIdx) {
             const daySlots = TIME_SLOTS
                 .map((t, i) => ({ t, i, mode: slots[`${dayIdx}_${t}`] }))
@@ -2216,18 +2286,14 @@
             });
         }
 
-        // ════════════════════════════════════════════════
-        //  TOAST
-        // ════════════════════════════════════════════════
+        // TOAST
         function toast(msg) {
             const t = document.getElementById('toast');
             t.textContent = msg; t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2800);
         }
 
-        // ════════════════════════════════════════════════
-        //  BOOT
-        // ════════════════════════════════════════════════
+        // BOOT
         window._initApp = function () {
             const { auth, onAuthStateChanged } = window._fb;
 
