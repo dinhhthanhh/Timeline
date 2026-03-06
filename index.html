@@ -1815,10 +1815,27 @@
 
             const r = fbRefFn(db, `schedules/${wk}`);
             const unsubscribe = onValue(r, snap => {
-                allData[wk] = snap.val() || {};
-                if (off.ov === offsetOf(wk)) renderOv();
-                if (off.st === offsetOf(wk)) renderSt();
-                if (off.reg === offsetOf(wk)) renderReg();
+                const data = snap.val() || {};
+                allData[wk] = data;
+
+                // Đồng bộ dữ liệu của chính mình từ Firebase vào mySlots
+                if (user && data[user.uid]) {
+                    mySlots[wk] = data[user.uid].slots || {};
+                    // Nếu đang ở tuần này thì báo trạng thái real-time
+                    if (wKey(off.reg) === wk) {
+                        setSyncState('live');
+                    }
+                }
+
+                if (wKey(off.ov) === wk) renderOv();
+                if (wKey(off.st) === wk) renderSt();
+                if (wKey(off.reg) === wk) renderReg();
+            }, err => {
+                console.error('Sync error for week:', wk, err);
+                if (wKey(off.reg) === wk) {
+                    setSyncState('error');
+                    toast('Lỗi kết nối bộ đồng bộ tuần: ' + wk);
+                }
             });
             activeListeners[wk] = unsubscribe;
         }
@@ -1831,12 +1848,12 @@
 
         // Ghi dữ liệu của user lên Firebase
         async function fbWrite(wk, slots) {
-            const { set: fbSet, ref: fbRefFn, db } = window._fb;
+            const { set: fbSet, ref: fbRefFn, db, remove: fbRemove } = window._fb;
             setSyncState('saving');
             try {
                 const path = `schedules/${wk}/${user.uid}`;
                 if (Object.keys(slots).length === 0) {
-                    await window._fb.remove(fbRefFn(db, path));
+                    await fbRemove(fbRefFn(db, path));
                 } else {
                     await fbSet(fbRefFn(db, path), {
                         name: user.displayName,
@@ -1850,6 +1867,7 @@
             } catch (e) {
                 console.error('Firebase write error:', e);
                 setSyncState('error');
+                throw e; // Ném lỗi để bên ngoài xử lý
             }
         }
 
@@ -1886,14 +1904,19 @@
     <button class="btn btn-outline" onclick="logoutUser()">Đăng xuất</button>`;
             document.getElementById('login-wall').style.display = 'none';
             document.getElementById('reg-content').style.display = 'block';
-            // Load lịch cũ của mình từ localStorage
+
+            // Load lịch từ localStorage làm dữ liệu tạm thời ban đầu
             const saved = localStorage.getItem('ft_my_' + u.uid);
-            mySlots = saved ? JSON.parse(saved) : {};
-            renderReg();
-            // Bắt đầu lắng nghe tuần hiện tại
+            try {
+                mySlots = saved ? JSON.parse(saved) : {};
+            } catch (e) { mySlots = {}; }
+
+            // Bắt đầu lắng nghe các tuần - listenWeek sẽ ghi đè mySlots bằng dữ liệu chuẩn từ Firebase
             listenWeek(wKey(off.reg));
             listenWeek(wKey(off.ov));
             listenWeek(wKey(off.st));
+
+            renderReg();
             // Hiện live badge
             document.getElementById('ov-live-badge').style.display = 'inline-flex';
             document.getElementById('st-live-badge').style.display = 'inline-flex';
@@ -2018,9 +2041,16 @@
             if (!user) { toast('Vui lòng đăng nhập trước!'); return; }
             const wk = wKey(off.reg);
             const slots = mySlots[wk] || {};
-            localStorage.setItem('ft_my_' + user.uid, JSON.stringify(mySlots));
-            await fbWrite(wk, slots);
-            toast('Đã lưu và đồng bộ real-time!');
+
+            try {
+                // Lưu vào database trước
+                await fbWrite(wk, slots);
+                // Nếu thành công thì mới lưu vào localStorage làm cache
+                localStorage.setItem('ft_my_' + user.uid, JSON.stringify(mySlots));
+                toast('Đã lưu và đồng bộ real-time!');
+            } catch (e) {
+                toast('Lỗi khi lưu vào Database! Vui lòng kiểm tra kết nối.');
+            }
         }
 
         async function clearAndSave() {
@@ -2200,6 +2230,10 @@
         // ════════════════════════════════════════════════
         window._initApp = function () {
             const { auth, onAuthStateChanged } = window._fb;
+
+            // Bắt đầu lắng nghe ngay cả khi chưa đăng nhập để tab Tổng Hợp có dữ liệu
+            listenWeek(wKey(0));
+
             renderOv(); renderSt();
             onAuthStateChanged(auth, fbUser => {
                 if (fbUser) setUser(fbUser);
