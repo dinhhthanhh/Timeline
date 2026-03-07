@@ -1899,32 +1899,18 @@
 
         // AUTH
         function loginGoogle() {
-            const { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect } = window._fb;
+            const { auth, GoogleAuthProvider, signInWithPopup } = window._fb;
 
-            // Phát hiện in-app browser (Facebook, Zalo, Instagram, etc.)
             const ua = navigator.userAgent;
             const isInApp = /FBAN|FBAV|Instagram|ZaloApp|MicroMessenger/i.test(ua);
-
             if (isInApp) {
                 toast('Vui lòng mở bằng Chrome hoặc Safari để đăng nhập Google!');
                 return;
             }
 
             const provider = new GoogleAuthProvider();
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-
-            if (isMobile) {
-                signInWithRedirect(auth, provider);
-                return;
-            }
-
             signInWithPopup(auth, provider).catch(e => {
-                if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request']
-                    .includes(e.code)) {
-                    signInWithRedirect(auth, provider);
-                } else {
-                    toast('Đăng nhập thất bại: ' + (e.message || e));
-                }
+                toast('Đăng nhập thất bại. Vui lòng thử lại! (' + (e.code || e.message) + ')');
             });
         }
 
@@ -1934,6 +1920,7 @@
         }
 
         function setUser(u) {
+            if (user && user.uid === u.uid) return; // Guard against redundant updates
             user = u;
             const name = u.displayName || u.email;
             document.getElementById('auth-area').innerHTML = `
@@ -2376,35 +2363,15 @@
 
         // BOOT
         window._initApp = function () {
-            const { auth, onAuthStateChanged, getRedirectResult } = window._fb;
-
-            let redirectHandled = false;
-
-            getRedirectResult(auth).then(result => {
-                redirectHandled = true;
-                if (result?.user) setUser(result.user);
-            }).catch(e => {
-                redirectHandled = true;
-                console.error('Redirect result error:', e);
-            });
+            const { auth, onAuthStateChanged } = window._fb;
 
             listenWeek(wKey(0));
-            renderOv(); renderSt();
+            renderOv();
+            renderSt();
 
             onAuthStateChanged(auth, fbUser => {
-                if (fbUser) {
-                    setUser(fbUser);
-                    return;
-                }
-
-                // Chờ tối đa 2.5 giây để getRedirectResult có cơ hội xử lý xong (đặc biệt quan trọng trên mobile)
-                if (!redirectHandled) {
-                    setTimeout(() => {
-                        if (!auth.currentUser) clearUserUI();
-                    }, 2500);
-                } else {
-                    clearUserUI();
-                }
+                if (fbUser) setUser(fbUser);
+                else clearUserUI();
             });
         };
 
