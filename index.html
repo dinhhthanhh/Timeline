@@ -2378,13 +2378,28 @@
         window._initApp = function () {
             const { auth, onAuthStateChanged, getRedirectResult } = window._fb;
 
+            let redirectHandled = false;
+
             getRedirectResult(auth).then(result => {
+                redirectHandled = true;
                 if (result?.user) setUser(result.user);
-            }).catch(e => console.error('Redirect result error:', e));
+            }).catch(e => {
+                redirectHandled = true;
+                console.error('Redirect result error:', e);
+            });
 
             listenWeek(wKey(0));
             renderOv(); renderSt();
+
             onAuthStateChanged(auth, fbUser => {
+                // Wait up to 2 seconds for getRedirectResult to handle
+                if (!redirectHandled) {
+                    setTimeout(() => {
+                        if (fbUser) setUser(fbUser);
+                        else clearUserUI();
+                    }, 500);
+                    return;
+                }
                 if (fbUser) setUser(fbUser);
                 else clearUserUI();
             });
