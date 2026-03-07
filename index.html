@@ -747,9 +747,14 @@
             box-shadow: var(--sh-lg);
             z-index: 9999;
             opacity: 0;
-            transition: opacity .3s;
+            transition: opacity .3s, bottom .3s;
             pointer-events: none;
             white-space: nowrap;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+            transition: transform 0.1s;
         }
 
         .toast.show {
@@ -893,17 +898,18 @@
         }
 
         .popup-box {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            height: 94%;
             background: var(--white);
-            height: 100%;
-            width: 420px;
-            max-width: 90%;
-            box-shadow: -4px 0 24px rgba(29, 78, 216, 0.15);
-            padding: 0;
+            border-radius: 20px 20px 0 0;
             display: flex;
             flex-direction: column;
-            transform: translateX(100%);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+            transform: translateY(100%);
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            border-left: 1.5px solid var(--blue-100);
+            will-change: transform;
             overflow: hidden;
         }
 
@@ -1010,7 +1016,7 @@
         }
 
         .popup-overlay.show .popup-box {
-            transform: translateX(0);
+            transform: translateY(0);
         }
 
         .popup-title {
@@ -1379,17 +1385,17 @@
             .grid-row,
             .ov-header,
             .ov-row {
-                grid-template-columns: 60px repeat(7, minmax(50px, 1fr));
-                min-width: 410px;
+                grid-template-columns: 60px repeat(7, minmax(60px, 1fr));
+                min-width: 480px;
             }
 
             .slot,
             .ov-cell {
-                height: 56px;
+                height: 64px;
             }
 
             .time-label {
-                height: 56px;
+                height: 64px;
                 font-size: .7rem;
                 padding: 0 6px;
             }
@@ -1447,7 +1453,7 @@
             }
 
             .toast {
-                bottom: 24px;
+                bottom: 96px;
             }
 
             .popup-box {
@@ -1602,15 +1608,16 @@
                         <span class="week-range" id="reg-week-rng"></span>
                     </div>
                     <div style="flex:1"></div>
-                    <div class="legend">
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background:var(--green-500)"></div>Online
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background:var(--amber)"></div>Offline
-                        </div>
-                    </div>
                     <button class="arrow-btn" id="reg-next" onclick="changeWeek('reg',1)">&#8594;</button>
+                </div>
+
+                <div class="legend" style="margin-bottom: 12px; justify-content: flex-start; padding: 0 4px;">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--green-500)"></div>Online
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--amber)"></div>Offline
+                    </div>
                 </div>
 
                 <div class="mode-selector">
@@ -1661,15 +1668,6 @@
                     <span class="week-range" id="ov-week-rng"></span>
                 </div>
                 <div style="flex:1"></div>
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background:var(--blue-100);border:1.5px solid var(--blue-400)">
-                        </div>Ít người
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background:var(--blue-300)"></div>Nhiều người
-                    </div>
-                </div>
                 <button class="arrow-btn" onclick="changeWeek('ov',1)">&#8594;</button>
             </div>
 
