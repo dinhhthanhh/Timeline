@@ -1769,10 +1769,6 @@
                 <div id="popup-body"></div>
             </div>
 
-            <div class="side-footer">
-                <button class="popup-close" style="margin-top:0"
-                    onclick="closePopup({target: document.getElementById('popup')})">Đóng</button>
-            </div>
         </div>
     </div>
 
@@ -2038,93 +2034,34 @@
             // Drag state
             let isDragging = false;
             let dragAction = null; // 'add' or 'remove'
-            let initialTargetMode = null;
-            let touchStartPos = null;
-            let isScrolling = false;
+            let dragMoveCount = 0;
 
             // Global mouse/touch up to end drag
             const endDrag = () => {
                 if (!isDragging) return;
                 isDragging = false;
-                if (!mySlots[wk]) mySlots[wk] = {}; // ← thêm dòng này
-                // Apply all previews
-                document.querySelectorAll('.slot.preview-sel-online, .slot.preview-sel-offline, .slot.preview-del').forEach(c => {
-                    const k = c.dataset.key;
-                    if (c.classList.contains('preview-del')) {
-                        delete mySlots[wk][k];
-                    } else {
-                        mySlots[wk][k] = mode;
-                    }
-                });
-                renderReg();
-                setSyncState('idle');
-            };
 
-            const continueDrag = (e, cell, wk) => {
-                if (!isDragging) return;
-                previewCell(cell);
-            };
-
-            body.ontouchmove = (e) => {
-                if (!isDragging && !isScrolling) {
-                    const touch = e.touches[0];
-                    const dx = Math.abs(touch.clientX - touchStartPos.x);
-                    const dy = Math.abs(touch.clientY - touchStartPos.y);
-                    if (dy > dx && dy > 10) {
-                        isScrolling = true;
-                        return;
-                    }
-                    if (dx > 10) {
-                        isDragging = true;
-                    }
-                }
-
-                if (isScrolling) return;
-                if (!isDragging) return;
-
-                e.preventDefault();
-                const touch = e.touches[0];
-                const el = document.elementFromPoint(touch.clientX, touch.clientY);
-                const cell = el?.closest('.slot');
-                if (cell && !cell.classList.contains('past')) previewCell(cell);
-            };
-
-            const previewCell = (cell) => {
-                if (dragAction === 'remove') {
-                    if (cell.classList.contains(`sel-${mode}`)) {
-                        cell.classList.add('preview-del');
-                    }
+                if (dragMoveCount > 0) {
+                    if (!mySlots[wk]) mySlots[wk] = {};
+                    document.querySelectorAll('.slot.preview-sel-online, .slot.preview-sel-offline, .slot.preview-del').forEach(c => {
+                        const k = c.dataset.key;
+                        if (c.classList.contains('preview-del')) {
+                            delete mySlots[wk][k];
+                        } else {
+                            mySlots[wk][k] = mode;
+                        }
+                    });
+                    renderReg();
+                    setSyncState('idle');
                 } else {
-                    // if adding: if empty or different mode -> preview add
-                    if (!cell.classList.contains(`sel-${mode}`)) {
-                        cell.classList.add(`preview-sel-${mode}`);
-                        cell.classList.remove('preview-del');
-                    }
+                    // Single click, just clear previews (onclick will handle it)
+                    document.querySelectorAll('.slot.preview-sel-online, .slot.preview-sel-offline, .slot.preview-del').forEach(c => {
+                        c.classList.remove('preview-del', 'preview-sel-online', 'preview-sel-offline');
+                    });
                 }
             };
 
-            const startDrag = (e, cell, wk) => {
-                touchStartPos = { x: e.clientX, y: e.clientY };
-                isScrolling = false;
-                isDragging = true;
-                const k = cell.dataset.key;
-                const curMode = mySlots[wk]?.[k];
-                initialTargetMode = curMode;
-                dragAction = (curMode === mode) ? 'remove' : 'add';
-                previewCell(cell);
-            };
 
-            const startTouchDrag = (e, cell, wk) => {
-                const touch = e.touches[0];
-                touchStartPos = { x: touch.clientX, y: touch.clientY };
-                isScrolling = false;
-                // Don't set isDragging=true yet, wait for move to distinguish scroll vs drag
-                const k = cell.dataset.key;
-                const curMode = mySlots[wk]?.[k];
-                initialTargetMode = curMode;
-                dragAction = (curMode === mode) ? 'remove' : 'add';
-                previewCell(cell);
-            };
 
             TIME_SLOTS.forEach(t => {
                 const row = document.createElement('div');
@@ -2140,10 +2077,24 @@
                     if (m2) cell.innerHTML = `<div class="slot-dot ${m2}"></div>`;
 
                     if (!past) {
-                        cell.onmousedown = (e) => startDrag(e, cell, wk);
-                        cell.onmouseenter = (e) => continueDrag(e, cell, wk);
-                        // Touch support: remove default preventDefault to allow scroll detection
-                        cell.ontouchstart = (e) => { startTouchDrag(e, cell, wk); };
+                        cell.onmousedown = (e) => {
+                            isDragging = true;
+                            dragMoveCount = 0;
+                            const curMode = mySlots[wk]?.[k];
+                            dragAction = (curMode === mode) ? 'remove' : 'add';
+                            if (dragAction === 'remove') cell.classList.add('preview-del');
+                            else cell.classList.add(`preview-sel-${mode}`);
+                        };
+                        cell.onmouseenter = (e) => {
+                            if (!isDragging) return;
+                            dragMoveCount++;
+                            if (dragAction === 'remove') {
+                                if (cell.classList.contains(`sel-${mode}`)) cell.classList.add('preview-del');
+                            } else {
+                                if (!cell.classList.contains(`sel-${mode}`)) cell.classList.add(`preview-sel-${mode}`);
+                            }
+                        };
+                        cell.onclick = () => toggleSlot(di, t, cell, wk);
                     }
                     row.appendChild(cell);
                 });
@@ -2151,7 +2102,6 @@
             });
 
             window.onmouseup = endDrag;
-            window.ontouchend = endDrag;
 
             document.getElementById('reg-week-lbl').textContent = wLabel(off.reg);
             document.getElementById('reg-week-rng').textContent = wRange(off.reg);
