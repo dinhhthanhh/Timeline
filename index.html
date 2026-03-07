@@ -600,8 +600,8 @@
 
         .slot.past {
             cursor: not-allowed;
-            background: var(--gray-50);
-            opacity: .5;
+            background: var(--gray-200);
+            opacity: .8;
             pointer-events: none;
         }
 
@@ -1906,7 +1906,24 @@
         // AUTH
         function loginGoogle() {
             const { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect } = window._fb;
+
+            // Phát hiện in-app browser (Facebook, Zalo, Instagram, etc.)
+            const ua = navigator.userAgent;
+            const isInApp = /FBAN|FBAV|Instagram|ZaloApp|MicroMessenger/i.test(ua);
+
+            if (isInApp) {
+                toast('Vui lòng mở bằng Chrome hoặc Safari để đăng nhập Google!');
+                return;
+            }
+
             const provider = new GoogleAuthProvider();
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+
+            if (isMobile) {
+                signInWithRedirect(auth, provider);
+                return;
+            }
+
             signInWithPopup(auth, provider).catch(e => {
                 if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request']
                     .includes(e.code)) {
