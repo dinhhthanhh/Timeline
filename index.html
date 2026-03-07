@@ -2392,16 +2392,19 @@
             renderOv(); renderSt();
 
             onAuthStateChanged(auth, fbUser => {
-                // Wait up to 2 seconds for getRedirectResult to handle
-                if (!redirectHandled) {
-                    setTimeout(() => {
-                        if (fbUser) setUser(fbUser);
-                        else clearUserUI();
-                    }, 500);
+                if (fbUser) {
+                    setUser(fbUser);
                     return;
                 }
-                if (fbUser) setUser(fbUser);
-                else clearUserUI();
+
+                // Chờ tối đa 2.5 giây để getRedirectResult có cơ hội xử lý xong (đặc biệt quan trọng trên mobile)
+                if (!redirectHandled) {
+                    setTimeout(() => {
+                        if (!auth.currentUser) clearUserUI();
+                    }, 2500);
+                } else {
+                    clearUserUI();
+                }
             });
         };
 
