@@ -20,7 +20,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged }
             from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { getDatabase, ref, set, remove, onValue, off as dbOff }
             from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -43,7 +43,7 @@
         // ── Expose to global so inline handlers can reach ──
         window._fb = {
             auth, db, ref, set, remove, onValue, dbOff,
-            GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+            GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
         };
 
         // ── Bootstrap app once DOM is ready ──
@@ -1905,10 +1905,15 @@
 
         // AUTH
         function loginGoogle() {
-            const { auth, GoogleAuthProvider, signInWithPopup } = window._fb;
+            const { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect } = window._fb;
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider).catch(e => {
-                toast('Đăng nhập thất bại: ' + e.message);
+                if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request']
+                    .includes(e.code)) {
+                    signInWithRedirect(auth, provider);
+                } else {
+                    toast('Đăng nhập thất bại: ' + (e.message || e));
+                }
             });
         }
 
@@ -2026,6 +2031,7 @@
             const endDrag = () => {
                 if (!isDragging) return;
                 isDragging = false;
+                if (!mySlots[wk]) mySlots[wk] = {}; // ← thêm dòng này
                 // Apply all previews
                 document.querySelectorAll('.slot.preview-sel-online, .slot.preview-sel-offline, .slot.preview-del').forEach(c => {
                     const k = c.dataset.key;
@@ -2405,11 +2411,13 @@
 
         // BOOT
         window._initApp = function () {
-            const { auth, onAuthStateChanged } = window._fb;
+            const { auth, onAuthStateChanged, getRedirectResult } = window._fb;
 
-            // Bắt đầu lắng nghe ngay cả khi chưa đăng nhập để tab Tổng Hợp có dữ liệu
+            getRedirectResult(auth).then(result => {
+                if (result?.user) setUser(result.user);
+            }).catch(e => console.error('Redirect result error:', e));
+
             listenWeek(wKey(0));
-
             renderOv(); renderSt();
             onAuthStateChanged(auth, fbUser => {
                 if (fbUser) setUser(fbUser);
